@@ -57,7 +57,7 @@ summary(model_data)
 ```
 ## Exploratory Data Analysis
 ### Summary statistics
-```{r eda}
+```{r summary statistics}
 # Summary statistics for continuous and categorical variables
 skim(model_data)
 
@@ -77,7 +77,7 @@ print(summary_by_status)
 ```
 
 ### Distribution Visualization
-```{r}
+```{r survival status}
 # Survival status
 ggplot(model_data, aes(x = status, fill = status)) +
   geom_bar(alpha = 0.7, color = "black") +
@@ -90,7 +90,7 @@ ggplot(model_data, aes(x = status, fill = status)) +
   )
 ```
 
-```{r}
+```{r race}
 # Race
 ggplot(model_data, aes(x = race, fill = race)) +
   geom_bar(alpha = 0.7, color = "black") +
@@ -115,7 +115,7 @@ ggplot(model_data, aes(x = race, fill = status)) +
   )
 ```
 
-```{r}
+```{r age}
 # Age
 ggplot(model_data, aes(x = age)) +
   geom_histogram(binwidth = 5, fill = "purple", color = "black", alpha = 0.7) +
@@ -138,3 +138,36 @@ ggplot(model_data, aes(x = status, y = age, fill = status)) +
   )
 ```
 
+```{r tumor size}
+# Tumor size
+ggplot(model_data, aes(x = tumor_size)) +
+  geom_histogram(binwidth = 10, fill = "pink", alpha = 0.7, color = "black") +
+  theme_minimal() +
+  labs(
+    title = "Tumor Size Distribution",
+    x = "Tumor Size (mm)",
+    y = "Count"
+  )
+
+# Tumor size by survival status
+ggplot(model_data, aes(x = status, y = tumor_size, fill = status)) +
+  geom_boxplot(alpha = 0.8, color = "black") +
+  scale_fill_manual(values = c("Alive" = "gold", "Dead" = "lightblue")) +
+  theme_minimal() +
+  labs(
+    title = "Tumor Size by Survival Status",
+    x = "Status",
+    y = "Tumor Size (mm)"
+  )
+
+# Tumor size by race and survival status
+ggplot(model_data, aes(x = race, y = tumor_size, fill = status)) +
+  geom_boxplot(alpha = 0.8, color = "black") +
+  scale_fill_manual(values = c("Alive" = "gold", "Dead" = "lightblue")) +
+  theme_minimal() +
+  labs(
+    title = "Tumor Size by Race and Survival Status",
+    x = "Race",
+    y = "Tumor Size (mm)"
+  )
+```
