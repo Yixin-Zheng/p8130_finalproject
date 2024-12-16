@@ -171,3 +171,20 @@ ggplot(model_data, aes(x = race, y = tumor_size, fill = status)) +
     y = "Tumor Size (mm)"
   )
 ```
+
+### Pairwise Relationships and Interactions
+```{r}
+# Pairwise relationships (correlation matrix for continuous variables)
+continuous_vars <- model_data %>%
+  select(age, tumor_size, regional_node_examined, reginol_node_positive) %>%
+  na.omit()
+
+corrplot(correlation_matrix, method = "circle", 
+         type = "upper", tl.col = "black", addCoef.col = "grey", 
+         number.cex = 0.8, tl.cex = 0.9)
+```
+Small circles (near-zero correlations) are observed for age and all other variables; tumor_size and regional_node_examined suggesting weak or no relationships.
+`regional_node_positive` is moderately associated with both `tumor size` (0.24) and `regional nodes examined` (0.41), which might influence modeling decisions.
+There are no strong correlations (close to ±1), suggesting no immediate multicollinearity issues among these variables.
+
+
