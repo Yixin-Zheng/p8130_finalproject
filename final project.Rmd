@@ -727,6 +727,7 @@ The reweighted model shows improved fairness compared to the original combined m
 Reweighting has reduced the performance gap between the White and minority groups. The ROC-AUC for the minority group (0.7358) is now closer to that of the majority group (0.7486).
 
 ## Conclusion
+### Table
 ```{r conclusion}
 # Extract coefficients and confidence intervals from the reweighted model
 summary_reweighted <- summary(reweighted_model$finalModel)
@@ -757,3 +758,9 @@ print(results_table)
 # Optional: Save the table to a CSV file for inclusion in the report
 write.csv(results_table, "reweighted_model_results.csv", row.names = FALSE)
 ```
+### Finding and Intepretation
+The final reweighted logistic regression model identifies significant predictors of mortality risk (Alive vs Dead) for breast cancer patients. The table above summarizes the parameter estimates, highlighting the direction, magnitude, and significance of each predictor.
+The study confirms that  Adjusted AJCC 6th stage (`x6th_stage`) and `grade` (Grade of the tumor) are the most critical factors in predicting mortality, which is consistent with clinical guidelines. Hormone receptor status also plays a vital role, as positive estrogen/progesterone receptors improve survival. Race also significantly impacts mortality risk. Black patients experience a higher risk of death compared to White patients. This disparity may stem from differences in access to healthcare, late diagnosis, or biological factors. The reweighted model successfully improves fairness across racial groups while maintaining overall predictive accuracy. Although the model performs slightly worse for minority groups, the gap has been reduced compared to the original model.
+
+### Limitation
+The model assumes no significant interaction effects, which aligns with the data but could miss complex relationships. The disparity in model performance for "Other" racial groups suggests the need for further data collection or alternative modeling techniques.
