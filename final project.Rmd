@@ -78,9 +78,9 @@ print(summary_by_status)
 
 ### Distribution Visualization
 ```{r}
-# Distribution of survival status
+# Survival status
 ggplot(model_data, aes(x = status, fill = status)) +
-  geom_bar(alpha = 0.7) +
+  geom_bar(alpha = 0.7, color = "black") +
   scale_fill_manual(values = c("Alive" = "gold", "Dead" = "lightblue")) +
   theme_minimal() +
   labs(
@@ -91,9 +91,10 @@ ggplot(model_data, aes(x = status, fill = status)) +
 ```
 
 ```{r}
-# Distribution of race
+# Race
 ggplot(model_data, aes(x = race, fill = race)) +
-  geom_bar(alpha = 0.7) +
+  geom_bar(alpha = 0.7, color = "black") +
+  scale_fill_manual(values = c("White" = "gold4", "Other" = "gold3", "Black" = "gold2")) +
   theme_minimal() +
   labs(
     title = "Distribution of Race",
@@ -102,9 +103,9 @@ ggplot(model_data, aes(x = race, fill = race)) +
   ) +
   theme(legend.position = "none") 
 
-# Distribution of race by survival status
+# Race by survival status
 ggplot(model_data, aes(x = race, fill = status)) +
-  geom_bar(position = "fill", alpha = 0.7) +
+  geom_bar(position = "fill", alpha = 0.7, , color = "black") +
   scale_fill_manual(values = c("Alive" = "gold", "Dead" = "lightblue")) +
   theme_minimal() +
   labs(
@@ -113,3 +114,27 @@ ggplot(model_data, aes(x = race, fill = status)) +
     y = "Proportion"
   )
 ```
+
+```{r}
+# Age
+ggplot(model_data, aes(x = age)) +
+  geom_histogram(binwidth = 5, fill = "purple", color = "black", alpha = 0.7) +
+  theme_minimal() +
+  labs(
+    title = "Age Distribution",
+    x = "Age",
+    y = "Count"
+  )
+
+# Age by survival status
+ggplot(model_data, aes(x = status, y = age, fill = status)) +
+  geom_boxplot(alpha = 0.7) +
+  scale_fill_manual(values = c("Alive" = "gold", "Dead" = "lightblue")) +
+  theme_minimal() +
+  labs(
+    title = "Age by Survival Status",
+    x = "Status",
+    y = "Age"
+  )
+```
+
