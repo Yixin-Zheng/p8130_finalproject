@@ -7,4 +7,43 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(caret) 
+library(dplyr)
+library(janitor)
+```
+```{r data import and initial tidy}
+# Import data and clean column names
+data <- read.csv("./data/Project_2_data.csv") %>% 
+  clean_names()
+
+# Convert categorical variables to factors and relabel `grade`
+data <- data %>%
+  mutate(
+    race = factor(race),
+    marital_status = factor(marital_status),
+    t_stage = factor(t_stage),
+    n_stage = factor(n_stage),
+    x6th_stage = factor(x6th_stage),
+    differentiate = factor(differentiate),
+    a_stage = factor(a_stage),
+    estrogen_status = factor(estrogen_status),
+    progesterone_status = factor(progesterone_status),
+    status = factor(status, levels = c("Alive", "Dead")),
+    grade = case_when(
+      grade == "1" ~ "Grade I",
+      grade == "2" ~ "Grade II",
+      grade == "3" ~ "Grade III",
+      grade == " anaplastic; Grade IV" ~ "Grade IV",
+      TRUE ~ NA_character_
+    ) %>% factor(levels = c("Grade I", "Grade II", "Grade III", "Grade IV"))  # To factor
+  )
+
+# Check for missing values
+missing_values <- colSums(is.na(data))
+print(missing_values)
+
+# Summarize structure of the cleaned dataset
+summary(data)
 ```
