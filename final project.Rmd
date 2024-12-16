@@ -8,18 +8,30 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
-library(ggplot2)
-library(caret) 
-library(dplyr)
 library(janitor)
+library(skimr)
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(corrplot)
 ```
+
+## Data Cleaning and Preprocessing
 ```{r data import and initial tidy}
 # Import data and clean column names
 data <- read.csv("./data/Project_2_data.csv") %>% 
   clean_names()
 
+# Select relevant covariates (variables 1-14) and outcome variable
+model_data <- data %>%
+  select(
+    age, race, marital_status, t_stage, n_stage, x6th_stage, differentiate, grade,
+    a_stage, tumor_size, estrogen_status, progesterone_status,
+    regional_node_examined, reginol_node_positive, status
+  )
+
 # Convert categorical variables to factors and relabel `grade`
-data <- data %>%
+model_data <- model_data %>%
   mutate(
     race = factor(race),
     marital_status = factor(marital_status),
@@ -32,18 +44,14 @@ data <- data %>%
     progesterone_status = factor(progesterone_status),
     status = factor(status, levels = c("Alive", "Dead")),
     grade = case_when(
-      grade == "1" ~ "Grade I",
-      grade == "2" ~ "Grade II",
-      grade == "3" ~ "Grade III",
-      grade == " anaplastic; Grade IV" ~ "Grade IV",
+      grade == "1" ~ "1",
+      grade == "2" ~ "2",
+      grade == "3" ~ "3",
+      grade == " anaplastic; Grade IV" ~ "4",
       TRUE ~ NA_character_
-    ) %>% factor(levels = c("Grade I", "Grade II", "Grade III", "Grade IV"))  # To factor
+    ) %>% factor(levels = c("1", "2", "3", "4"))
   )
 
-# Check for missing values
-missing_values <- colSums(is.na(data))
-print(missing_values)
-
 # Summarize structure of the cleaned dataset
-summary(data)
+summary(model_data)
 ```
