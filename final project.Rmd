@@ -727,5 +727,33 @@ The reweighted model shows improved fairness compared to the original combined m
 Reweighting has reduced the performance gap between the White and minority groups. The ROC-AUC for the minority group (0.7358) is now closer to that of the majority group (0.7486).
 
 ## Conclusion
-1. Your report should include a table summarizing parameter estimates associated with your final fitted model, characterizing predictor variables in a way that a reader can clearly understand
-2. conclusion and discussion (results intepretation)
+```{r conclusion}
+# Extract coefficients and confidence intervals from the reweighted model
+summary_reweighted <- summary(reweighted_model$finalModel)
+coefficients <- coef(summary_reweighted)
+
+# Calculate Odds Ratios and 95% Confidence Intervals
+odds_ratios <- exp(coefficients[, "Estimate"])
+lower_ci <- exp(coefficients[, "Estimate"] - 1.96 * coefficients[, "Std. Error"])
+upper_ci <- exp(coefficients[, "Estimate"] + 1.96 * coefficients[, "Std. Error"])
+
+# Combine into a table
+results_table <- data.frame(
+  Predictor = rownames(coefficients),
+  Estimate = round(coefficients[, "Estimate"], 3),
+  Std_Error = round(coefficients[, "Std. Error"], 3),
+  Odds_Ratio = round(odds_ratios, 3),
+  `95% CI (Lower)` = round(lower_ci, 3),
+  `95% CI (Upper)` = round(upper_ci, 3),
+  `P-Value` = format.pval(coefficients[, "Pr(>|z|)"], digits = 3)
+)
+
+# Clean up row names
+rownames(results_table) <- NULL
+
+# Print the table
+print(results_table)
+
+# Optional: Save the table to a CSV file for inclusion in the report
+write.csv(results_table, "reweighted_model_results.csv", row.names = FALSE)
+```
