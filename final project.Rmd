@@ -19,8 +19,9 @@ library(vcd)
 library(car)
 library(gridExtra)
 library(robustbase)
-
+library(leaps)
 ```
+## Motivation
 
 ## Data Cleaning and Preprocessing
 ```{r data import and initial tidy}
@@ -30,11 +31,7 @@ data <- read.csv("./data/Project_2_data.csv") %>%
 
 # Select relevant covariates (variables 1-14) and outcome variable
 model_data <- data %>%
-  select(
-    age, race, marital_status, t_stage, n_stage, x6th_stage, differentiate, grade,
-    a_stage, tumor_size, estrogen_status, progesterone_status,
-    regional_node_examined, reginol_node_positive, status
-  )
+  dplyr::select(-survival_months)
 
 # Convert categorical variables to factors and relabel `grade`
 model_data <- model_data %>%
@@ -113,7 +110,7 @@ for (i in seq_along(variables)) {
   
   # Select outcome and predictor variable, omitting missing values
   df_temp <- model_data %>%
-    select(status, all_of(var)) %>%
+    dplyr::select(status, all_of(var)) %>%
     na.omit()
    
   # Convert both columns to factors
@@ -196,7 +193,7 @@ Combining Black and Other into Minority Non-White simplifies the comparison and 
 #### Continuous Variables 
 ```{r continuous variables}
 continuous_vars <- model_data %>%
-  select(age, tumor_size, regional_node_examined, reginol_node_positive) %>%
+  dplyr::select(age, tumor_size, regional_node_examined, reginol_node_positive) %>%
   na.omit()
 
 df1 <- as.data.frame(continuous_vars)
@@ -214,7 +211,7 @@ Histograms were created for each continuous variable to visually examine their d
 
 ```{r transformation}
 df_log <- df1 %>%
-  select(-tumor_size, -regional_node_examined, -reginol_node_positive) %>%
+  dplyr::select(-tumor_size, -regional_node_examined, -reginol_node_positive) %>%
   mutate(
     tumor_size_log = log(df1$tumor_size + 1),
     rn_examined_log = log(df1$regional_node_examined + 1),
@@ -346,7 +343,7 @@ Given that both `x6th_stage` and `n_stage` are strong predictors, with `x6th_sta
 
 ```{r multicollinearity1}
 model_data_2 <- model_data_1 %>%
-  select(-differentiate, -n_stage, -t_stage, -reginol_node_positive)
+  dplyr::select(-differentiate, -n_stage, -t_stage, -reginol_node_positive)
 
 alias(glm(status ~ ., data = model_data_2, family = binomial))
 
@@ -365,7 +362,7 @@ The results show that all VIF values are below 5, which indicates that multicoll
 #### Linear Relationship to Log Odds
 ```{r Log Odds}
 continuous_vars_log_odds <- model_data_2 %>%
-  select(age, tumor_size, regional_node_examined, status) %>%  # Include 'status'
+  dplyr::select(age, tumor_size, regional_node_examined, status) %>%  # Include 'status'
   na.omit()
 
 # Log-transform tumor size and regional nodes examined
@@ -412,7 +409,7 @@ model_data_3 <- model_data_2 %>%
     rn_examined_log = log(regional_node_examined + 1),
     age_log = log(age + 1)
   ) %>%
-  select(-tumor_size, -regional_node_examined, -age) 
+  dplyr::select(-tumor_size, -regional_node_examined, -age) 
 ```
 From the plot, we see that there's a linear relationship between continuous predictors (log transformed) and the log odds of the outcome. 
 
@@ -420,7 +417,7 @@ From the plot, we see that there's a linear relationship between continuous pred
 
 ```{r outliers}
 # Fit logistic regression model with log-transformed predictors
-model_vif <- glm(status ~ age_log + tumor_size_log + rn_examined_log + grade + x6th_stage + race, 
+full_model <- glm(status ~ ., 
                  data = model_data_3, family = binomial)
 
 # Calculate Cook's Distance
@@ -434,23 +431,107 @@ abline(h = 4 / nrow(model_data_3), col = "red")
 influential_obs <- which(cooksD > 4 / nrow(model_data_3))
 
 # Build Model
-model_no_outliers <- glm(status ~ age_log + tumor_size_log + rn_examined_log + grade + x6th_stage + race, 
+model_no_outliers <- glm(status ~ ., 
                          data = model_data_3[-influential_obs, ], family = binomial)
 
-model_robust <- glmrob(status ~ age_log + tumor_size_log + rn_examined_log + grade + x6th_stage + race,
+model_robust <- glmrob(status ~ .,
                        data = model_data_3, family = binomial, method = "Mqle")
 
 # Compare summary statistics
-summary(model_vif)  # Original model
+summary(full_model)  # Original model
 summary(model_no_outliers)  # Model without influential points
 summary(model_robust)
 ```
-In large datasets, Cook's Distance*can flag numerous observations as influential, often due to large sample size. These flagged points may represent true variability in the population rather than errors.
-The code results indicate that removing influential points harms the model, likely by disrupting essential data structure. Coefficients for variables like `grade`, `x6th_stage`, and `race` became unstable and unreliable, with extreme standard errors.  
-In contrast, the robust logistic regression* (`model_robust`) provided stable and reliable estimates while effectively mitigating the impact of influential observations. Key predictors, such as `age_log`, `rn_examined_log`, `grade`, `x6th_stage`, and `race`, retained coefficients similar to the standard logistic regression.  
-The robustness weights further show that about 12% of the data (482 out of 4024 observations) had reduced influence, while the majority (~88%, or 3542 observations) remained largely unaffected with weights close to 1. This approach accounts for influential points by down-weighting their impact, ensuring the model is less sensitive to extreme values without the need to remove data.
+
+In large datasets, Cook's Distance*can flag numerous observations as influential, often due to large sample size. These flagged points may represent true variability in the population rather than errors. The code results indicate that removing influential points harms the model, likely by disrupting essential data structure. Coefficients for variables like `grade` and intercept became unstable and unreliable, with extreme standard errors. 
+
+In contrast, the robust logistic regression (`model_robust`) provided stable and reliable estimates while effectively mitigating the impact of influential observations. Key predictors, such as `age_log`, `rn_examined_log`, `grade`, `x6th_stage`, and `race`, retained coefficients similar to the standard logistic regression. The robustness weights further show that about 12% of the data (478 out of 4024 observations) had reduced influence, while the majority (~88%, or 3546 observations) remained largely unaffected with weights close to 1. This approach accounts for influential points by down-weighting their impact, ensuring the model is less sensitive to extreme values without the need to remove data.
+
+While both original and robust logistic regression are viable options for future analysis, we will proceed with the original logistic regression due to our limited familiarity with robust logistic regression techniques
 
 #### Independence of Errors
 Since there are no group IDs, the independence assumption is satisfied.
 
+### Model Evaluation and Selection
+We use original Logistic Regression as the primary models, considering its earlier performance.
+```{r variable selection-original}
+# Forward selection
+forward_model <- step(glm(status ~ ., data = model_data_3, family = binomial), 
+                      scope = list(lower = ~1, upper = full_model), 
+                      direction = "forward", trace = 0)
 
+# Backward elimination
+backward_model <- step(glm(status ~ ., 
+                            data = model_data_3, family = binomial),
+                       direction = "backward", trace = 0)
+
+
+# Stepwise selection
+stepwise_model <- step(glm(status ~ ., data = model_data_3, family = binomial), 
+                       scope = list(lower = ~1, upper = full_model), 
+                       direction = "both", trace = 0)
+
+summary(full_model)
+summary(forward_model)
+summary(backward_model)
+summary(stepwise_model)
+```
+
+```{r best subset-original}
+best_subset <- regsubsets(`status` ~ ., data = model_data_3, nvmax = ncol(model_data_3) - 1)
+best_summary <- summary(best_subset)
+
+subset_table <- data.frame(
+  Num_Predictors = 1:length(best_summary$adjr2),
+  Adj_R2 = best_summary$adjr2,
+  Cp = best_summary$cp,
+  BIC = best_summary$bic
+)
+print(subset_table)
+
+best_adjr2_model <- which.max(best_summary$adjr2)
+adjr2_predictor <- names(coef(best_subset, best_adjr2_model))[-1]
+best_cp_model <-  which.min(best_summary$cp)
+cp_predictor <- names(coef(best_subset, best_cp_model))[-1]
+best_bic_model <- which.min(best_summary$bic)
+bic_predictor <- names(coef(best_subset, best_bic_model))[-1]
+
+
+cat("Best Model by Adjusted R2: ", best_adjr2_model, "variables,", adjr2_predictor, "\n")
+cat("Best Model by Cp: ", best_cp_model, "variables,", cp_predictor, "\n")
+cat("Best Model by BIC: ", best_bic_model, "variables,", bic_predictor, "\n")
+
+par(mfrow = c(1, 3))
+plot(best_summary$adjr2, 
+     type = "b", 
+     main = "Adjusted R² vs Model Size", 
+     xlab = "Number of Variables", 
+     ylab = "Adjusted R²")
+plot(best_summary$cp, 
+     type = "b", 
+     main = "Cp vs Model Size", 
+     xlab = "Number of Variables", 
+     ylab = "Cp")
+plot(best_summary$bic, 
+     type = "b", 
+     main = "BIC vs Model Size", 
+     xlab = "Number of Variables", 
+     ylab = "BIC")
+par(mfrow = c(1, 1))
+```
+All the procedures generated the same model.
+`glm(formula = status ~ race + marital_status + x6th_stage + grade + estrogen_status + progesterone_status + rn_examined_log + age_log, family = binomial, data = model_data_3)`
+
+describe your final model to  predict the risk of death.and interpret its parameters in an accurate and useful manner, explore several candidate models, and explain why you selected your model.
+
+Which factors (features) affect the risk significantly? Are there interacting effects?
+
+Evaluate the performance of your model(s). Is your model achieving similar performance
+between the majority race group “White” and the minority “Black” (or “Black” + “Other”)? If
+not, could you try to improve the fairness (i.e., reducing the gap of prediction performance
+between the majority and minority) of your model(s)?
+
+
+## Conclusion
+1. Your report should include a table summarizing parameter estimates associated with your final fitted model, characterizing predictor variables in a way that a reader can clearly understand
+2. conclusion and discussion (results intepretation)
