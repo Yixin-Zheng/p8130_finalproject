@@ -14,6 +14,8 @@ library(dplyr)
 library(ggplot2)
 library(caret)
 library(corrplot)
+library(lsr)
+library(vcd)
 ```
 
 ## Data Cleaning and Preprocessing
@@ -77,55 +79,162 @@ print(summary_by_status)
 ```
 
 ### Distribution Visualization
-```{r survival status}
-# Survival status
-ggplot(model_data, aes(x = status, fill = status)) +
-  geom_bar(alpha = 0.7, color = "black") +
-  scale_fill_manual(values = c("Alive" = "gold", "Dead" = "lightblue")) +
-  theme_minimal() +
+
+#### Categorical Variables
+Our modified dataset contains **10 categorical variables**:  
+- **race**: Patient’s race (Black, White, Other).  
+- **marital_status**: Patient’s marital status (Divorced, Married, Separated, Single, Widowed).  
+- **t_stage**: Tumor stage (T1, T2, T3, T4). ("T" refers to the size of the primary tumor)
+- **n_stage**: Lymph node stage (N1, N2, N3). (extent of cancer spread to nearby lymph nodes)
+- **x6th_stage**: Adjusted AJCC 6th stage (IIA, IIB, IIIA, IIIB, IIIC).  
+- **differentiate**: Tumor differentiation (Well, Moderately, Poorly, Undifferentiated).  
+- **grade**: Grade of the tumor (1–4). 
+- **a_stage**: Tumor spread stage (Regional, Distant).  
+- **estrogen_status**: Estrogen receptor status (Positive, Negative).  
+- **progesterone_status**: Progesterone receptor status (Positive, Negative).  
+
+To examine the association of these variables with the binary outcome `status` (Alive/Dead), I used **Cramér's V**, which quantifies the strength of the association between two categorical variables based on the Chi-Square statistic. 
+Cramér's V ranges from **0** (no association) to **1** (perfect association). This method helps identify the predictors most strongly associated with survival status, enabling us to prioritize variables for modeling.
+```{r categorical varibales}
+# Define categorical variables to analyze
+variables <- c("race", "marital_status", "t_stage", "n_stage", "x6th_stage", 
+               "differentiate", "grade", "a_stage", "estrogen_status", "progesterone_status")
+
+# Initialize a vector to store Cramér's V results
+results <- numeric(length(variables))
+
+# Calculate Cramér's V for each variable
+for (i in seq_along(variables)) {
+  var <- variables[i]
+  
+  # Select outcome and predictor variable, omitting missing values
+  df_temp <- model_data %>%
+    select(status, all_of(var)) %>%
+    na.omit()
+   
+  # Convert both columns to factors
+  x <- droplevels(as.factor(df_temp$status))
+  y <- droplevels(as.factor(df_temp[[var]]))
+  
+  # Create contingency table and calculate Cramér's V
+  table_var <- table(x, y)
+  results[i] <- cramersV(table_var)
+}
+
+# Create a dataframe with results
+association_df <- data.frame(Variable = variables, CramersV = results)
+
+# Plot Cramér's V values
+ggplot(association_df, aes(x = reorder(Variable, CramersV), y = CramersV, fill = CramersV)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
   labs(
-    title = "Distribution of Survival Status",
-    x = "Status",
-    y = "Count"
-  )
+    title = "Association Between Survival Status and Predictor Variables",
+    x = "Predictor Variables",
+    y = "Cramér's V",
+    fill = "Cramér's V"
+  ) +
+  theme_minimal()
 ```
+The plot shows the strength of association (Cramér’s V) between **survival status** and each categorical predictor:
+
+1. **x6th_stage** and **n_stage** have the **highest Cramér's V values** (around 0.25), indicating they are the most informative predictors of survival status in the dataset. These variables reflect tumor stage and lymph node involvement, which are critical factors in breast cancer prognosis.
+
+2. **Estrogen_status**, **progesterone_status**, and **grade** exhibit **moderate associations** (Cramér’s V around 0.15–0.2). These variables provide meaningful information about hormone status and differentiation, making them important contributors to survival prediction.
+
+3. **Differentiate** and **t_stage** show moderate but slightly lower associations compared to the top variables, suggesting their relevance to survival status.
+
+4. **a_stage**, **marital_status**, and **race** have **lower Cramér’s V values** (less than 0.1), indicating weaker associations with survival status. Although these variables contribute limited information individually, they may still be useful in interaction terms or when combined with other predictors.
+
+By focusing on variables with higher Cramér’s V values, we can build more efficient and predictive models for survival status analysis.
 
 ```{r race}
-# Race
-ggplot(model_data, aes(x = race, fill = race)) +
-  geom_bar(alpha = 0.7, color = "black") +
-  scale_fill_manual(values = c("White" = "gold4", "Other" = "gold3", "Black" = "gold2")) +
-  theme_minimal() +
-  labs(
-    title = "Distribution of Race",
-    x = "Race",
-    y = "Count"
-  ) +
-  theme(legend.position = "none") 
-
-# Race by survival status
+# Proportional Bar Plot for Survival Status by Race
 ggplot(model_data, aes(x = race, fill = status)) +
-  geom_bar(position = "fill", alpha = 0.7, , color = "black") +
+  geom_bar(position = "fill", alpha = 0.8, color = "black") +
   scale_fill_manual(values = c("Alive" = "gold", "Dead" = "lightblue")) +
   theme_minimal() +
   labs(
     title = "Survival Status by Race",
     x = "Race",
-    y = "Proportion"
+    y = "Proportion",
+    fill = "Status"
   )
-```
 
-```{r age}
-# Age
-ggplot(model_data, aes(x = age)) +
-  geom_histogram(binwidth = 5, fill = "purple", color = "black", alpha = 0.7) +
+# Combine "Black" and "Other" into a single group "Minority Non-White"
+model_data <- model_data %>%
+  mutate(
+    race_combined = case_when(
+      race == "White" ~ "Majority White",
+      race %in% c("Black", "Other") ~ "Minority Non-White"
+    ),
+    race_combined = factor(race_combined, levels = c("Majority White", "Minority Non-White"))
+  )
+
+# Proportional Bar Plot for Combined Race Groups
+ggplot(model_data, aes(x = race_combined, fill = status)) +
+  geom_bar(position = "fill", alpha = 0.8, color = "black") +
+  scale_fill_manual(values = c("Alive" = "gold", "Dead" = "lightblue")) +
   theme_minimal() +
   labs(
-    title = "Age Distribution",
-    x = "Age",
-    y = "Count"
+    title = "Survival Status by Combined Race Groups",
+    x = "Race Group",
+    y = "Proportion",
+    fill = "Status"
+  )
+```
+Both plots confirm a disparity in survival outcomes across racial groups.
+Non-White patients, particularly Black patients, show a higher likelihood of death.
+Effect of Combining Groups:
+Combining Black and Other into Minority Non-White simplifies the comparison and reduce the racial disparities between Majority White and Minority Non-White groups.
+
+#### Continuous Variables 
+```{r continuous variables}
+continuous_vars <- model_data %>%
+  select(age, tumor_size, regional_node_examined, reginol_node_positive) %>%
+  na.omit()
+
+df1 <- as.data.frame(continuous_vars)
+par(mfrow = c(2, 4))
+for (col in names(df1)) {
+  hist(df1[[col]], 
+       main = paste("Histogram of", col), 
+       xlab = col, 
+       col = "beige", 
+       border = "black")
+}
+par(mfrow = c(1, 1))
+```
+Histograms were created for each continuous variable to visually examine their distributions and identify potential skewness. The results revealed that, except for `age`, the other three variables exhibited significant right skewness, indicating the need for transformation.
+
+```{r transformation}
+df_log <- df1 %>%
+  select(-tumor_size, -regional_node_examined, -reginol_node_positive) %>%
+  mutate(
+    tumor_size_log = log(df1$tumor_size + 1),
+    rn_examined_log = log(df1$regional_node_examined + 1),
+    rn_positive_log = log(df1$reginol_node_positive + 1)
   )
 
+par(mfrow = c(2, 4))
+for (col in continuous_vars) {
+  hist(
+    df_log[[col]],
+    main = paste("Histogram of", col),
+    xlab = col,
+    col = "beige",
+    border = "black"
+  )
+}
+par(mfrow = c(1, 1))
+```
+
+we see that after performing log-transformation, there is a improve on the skewness of the three variables.
+
+Boxplots were then generated for each continuous variable stratified by survival status to visually assess their relationships with the binary outcome. Both the original and transformed data boxplots were presented side by side to highlight the impact of the transformation.
+
+```{r age}
 # Age by survival status
 ggplot(model_data, aes(x = status, y = age, fill = status)) +
   geom_boxplot(alpha = 0.7) +
@@ -139,16 +248,6 @@ ggplot(model_data, aes(x = status, y = age, fill = status)) +
 ```
 
 ```{r tumor size}
-# Tumor size
-ggplot(model_data, aes(x = tumor_size)) +
-  geom_histogram(binwidth = 10, fill = "pink", alpha = 0.7, color = "black") +
-  theme_minimal() +
-  labs(
-    title = "Tumor Size Distribution",
-    x = "Tumor Size (mm)",
-    y = "Count"
-  )
-
 # Tumor size by survival status
 ggplot(model_data, aes(x = status, y = tumor_size, fill = status)) +
   geom_boxplot(alpha = 0.8, color = "black") +
@@ -172,17 +271,40 @@ ggplot(model_data, aes(x = race, y = tumor_size, fill = status)) +
   )
 ```
 
+```{r rn_examined}
+# Regional Node Examined by survival status
+ggplot(model_data, aes(x = status, y = regional_node_examined, fill = status)) +
+  geom_boxplot(alpha = 0.7) +
+  scale_fill_manual(values = c("Alive" = "gold", "Dead" = "lightblue")) +
+  theme_minimal() +
+  labs(
+    title = "Regional Node Examined by Survival Status",
+    x = "Status",
+    y = "regional_node_examined"
+  )
+```
+
+```{r rn_positive}
+# Reginol Node Positive by survival status
+ggplot(model_data, aes(x = status, y = reginol_node_positive, fill = status)) +
+  geom_boxplot(alpha = 0.7) +
+  scale_fill_manual(values = c("Alive" = "gold", "Dead" = "lightblue")) +
+  theme_minimal() +
+  labs(
+    title = "Reginol Node Positive by Survival Status",
+    x = "Status",
+    y = "regional_node_positive"
+  )
+```
+
 ### Pairwise Relationships and Interactions
 ```{r}
 # Pairwise relationships (correlation matrix for continuous variables)
-continuous_vars <- model_data %>%
-  select(age, tumor_size, regional_node_examined, reginol_node_positive) %>%
-  na.omit()
-
 corrplot(correlation_matrix, method = "circle", 
          type = "upper", tl.col = "black", addCoef.col = "grey", 
          number.cex = 0.8, tl.cex = 0.9)
 ```
+A correlation matrix was generated to examine the relationships between the variables.
 Small circles (near-zero correlations) are observed for age and all other variables; tumor_size and regional_node_examined suggesting weak or no relationships.
 `regional_node_positive` is moderately associated with both `tumor size` (0.24) and `regional nodes examined` (0.41), which might influence modeling decisions.
 There are no strong correlations (close to ±1), suggesting no immediate multicollinearity issues among these variables.
