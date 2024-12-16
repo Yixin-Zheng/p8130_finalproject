@@ -20,8 +20,11 @@ library(car)
 library(gridExtra)
 library(robustbase)
 library(leaps)
+library(pROC)
 ```
+
 ## Motivation
+Breast cancer prognosis is essential for guiding treatment and improving patient survival. This study uses logistic regression to identify key factors that influence whether patients survive or not (status: Alive or Dead). The goal is to build a clear and understandable model to predict survival and see how well it works across different racial groups. It also focuses on fairness by examining performance differences between groups and finding ways to improve generalizability of the model.
 
 ## Data Cleaning and Preprocessing
 ```{r data import and initial tidy}
@@ -603,16 +606,125 @@ Higher stages (IIIA, IIIB, IIIC) significantly increase the odds of death compar
 So `x6th_stage`, `grade`, `estrogen_statusPositive` and `progesterone_statusPositive`, `age_log` and `rn_examined_log` are significant predictors affecting the risk.
 
 #### Model Performance
-Evaluate the performance of your model(s). Is your model achieving similar performance
-between the majority race group “White” and the minority “Black” (or “Black” + “Other”)? If
-not, could you try to improve the fairness (i.e., reducing the gap of prediction performance
-between the majority and minority) of your model(s)?
-
 ```{r performance}
-data_white <- model_data_3 %>% filter(race == "White")
-data_minority <- model_data_3 %>% filter(race != "White")
+set.seed(123)
+control <- trainControl(method = "cv", number = 10, classProbs = TRUE, summaryFunction = twoClassSummary)
+
+cv_model <- train(
+  status ~ race + marital_status + x6th_stage + grade + estrogen_status + 
+    progesterone_status + rn_examined_log + age_log,
+  data = model_data_3,
+  method = "glm",
+  family = "binomial",
+  trControl = control,
+  metric = "ROC"
+)
+
+cv_model 
+```
+ROC-AUC: 0.7400, the overall performance of the model is moderately good, with an acceptable ability to distinguish between "Alive" and "Dead" outcomes.
+Sensitivity: 0.985, the model is highly sensitive, meaning it correctly identifies most of the "Dead" cases.
+Specificity: 0.122, the model has very low specificity, indicating difficulty in correctly identifying "Alive" cases.
+
+```{r fairness}
+# Split data by race group
+white_data <- model_data_3 %>% filter(race == "White")
+minority_data <- model_data_3 %>% filter(race != "White")
+black_data <- model_data_3 %>% filter(race == "Black")
+other_data <- model_data_3 %>% filter(race == "Other")
+
+# Predict probabilities for White group
+pred_white <- predict(cv_model, newdata = white_data, type = "prob")[, "Dead"]
+roc_white <- roc(white_data$status, pred_white)
+auc_white <- auc(roc_white)
+
+# Predict probabilities for Minority group
+pred_minority <- predict(cv_model, newdata = minority_data, type = "prob")[, "Dead"]
+roc_minority <- roc(minority_data$status, pred_minority)
+auc_minority <- auc(roc_minority)
+
+# Predict probabilities for Black group
+pred_black <- predict(cv_model, newdata = black_data, type = "prob")[, "Dead"]
+roc_black <- roc(black_data$status, pred_black)
+auc_black <- auc(roc_black)
+
+# Predict probabilities for Other group
+pred_other <- predict(cv_model, newdata = other_data, type = "prob")[, "Dead"]
+roc_other <- roc(other_data$status, pred_other)
+auc_other <- auc(roc_other)
+
+# Print AUC results
+cat("ROC-AUC for White group:", auc_white, "\n")
+cat("ROC-AUC for Black group:", auc_black, "\n")
+cat("ROC-AUC for Other group:", auc_other, "\n")
+cat("ROC-AUC for Minority group:", auc_minority, "\n")
+```
+Performance by Race Groups
+White Group (Majority):
+- ROC-AUC: 0.7504
+- The model performs better for the majority race group, achieving the highest predictive ability among the subgroups.
+
+Black Group (Minority):
+- ROC-AUC: 0.7021
+- The performance for Black patients is lower than for White patients, indicating potential disparities in prediction accuracy.
+
+Other Group (Minority):
+- ROC-AUC: 0.6584
+- The lowest ROC-AUC is for the "Other" race group, suggesting the model struggles most with this subgroup.
+
+Combined Minority Group (Black + Other):
+- ROC-AUC: 0.7313
+- When grouped together, the model's performance for minorities improves but remains slightly lower than for the White group.
+
+This disparity indicate a potential fairness issue, which need us to reduce the performance gap.
+```{r}
+model_data_4 <- model_data_3 %>%
+  mutate(weight = case_when(
+    race == "White" ~ 1,
+    race == "Black" ~ 1.5,
+    race == "Other" ~ 2
+  ))
+
+minority_data <- model_data_4 %>% filter(race != "White")
+
+# Refit the model with weights
+reweighted_model <- train(
+  status ~ race + marital_status + x6th_stage + grade + estrogen_status + 
+    progesterone_status + rn_examined_log + age_log,
+  data = model_data_4,
+  method = "glm",
+  family = "binomial",
+  trControl = control,
+  weights = weight
+)
+
+# Evaluate performance on subgroups
+pred_white_weighted <- predict(reweighted_model, newdata = white_data, type = "prob")[, "Dead"]
+roc_white_weighted <- roc(white_data$status, pred_white_weighted)
+auc_white_weighted <- auc(roc_white_weighted)
+
+pred_minority_weighted <- predict(reweighted_model, newdata = minority_data, type = "prob")[, "Dead"]
+roc_minority_weighted <- roc(minority_data$status, pred_minority_weighted)
+auc_minority_weighted <- auc(roc_minority_weighted)
+
+pred_black_weighted <- predict(reweighted_model, newdata = black_data, type = "prob")[, "Dead"]
+roc_black_weighted <- roc(black_data$status, pred_black_weighted)
+auc_black_weighted <- auc(roc_black_weighted)
+
+pred_other_weighted <- predict(reweighted_model, newdata = other_data, type = "prob")[, "Dead"]
+roc_other_weighted <- roc(other_data$status, pred_other_weighted)
+auc_other_weighted <- auc(roc_other_weighted)
+
+# Print updated results
+cat("Reweighted Model - ROC-AUC for White group:", auc_white_weighted, "\n")
+cat("Reweighted Model - ROC-AUC for Minority group:", auc_minority_weighted, "\n")
+cat("Reweighted Model - ROC-AUC for Black group:", auc_black_weighted, "\n")
+cat("Reweighted Model - ROC-AUC for Other group:", auc_other_weighted, "\n")
+
 
 ```
+The reweighted model shows improved fairness compared to the original combined model:
+Reweighting has reduced the performance gap between the White and minority groups. The ROC-AUC for the minority group (0.7358) is now closer to that of the majority group (0.7486).
 
 ## Conclusion
 1. Your report should include a table summarizing parameter estimates associated with your final fitted model, characterizing predictor variables in a way that a reader can clearly understand
