@@ -75,3 +75,17 @@ summary_by_status <- model_data %>%
   )
 print(summary_by_status)
 ```
+
+### Distribution Visualization
+```{r}
+# Distribution of survival status
+ggplot(model_data, aes(x = status, fill = status)) +
+  geom_bar(alpha = 0.8) +
+  scale_fill_manual(values = c("Alive" = "green", "Dead" = "red")) +
+  theme_minimal() +
+  labs(
+    title = "Distribution of Survival Status",
+    x = "Status",
+    y = "Count"
+  )
+```
