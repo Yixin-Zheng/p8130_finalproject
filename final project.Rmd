@@ -55,3 +55,23 @@ model_data <- model_data %>%
 # Summarize structure of the cleaned dataset
 summary(model_data)
 ```
+## Exploratory Data Analysis
+### Summary statistics
+```{r eda}
+# Summary statistics for continuous and categorical variables
+skim(model_data)
+
+# Key statistics grouped by survival status
+summary_by_status <- model_data %>%
+  group_by(status) %>%
+  summarise(
+    mean_age = mean(age, na.rm = TRUE),
+    sd_age = sd(age, na.rm = TRUE),
+    mean_tumor_size = mean(tumor_size, na.rm = TRUE),
+    sd_tumor_size = sd(tumor_size, na.rm = TRUE),
+    prop_white = mean(race == "White", na.rm = TRUE),
+    prop_black_other = mean(race != "White", na.rm = TRUE),
+    n_obs = n()
+  )
+print(summary_by_status)
+```
