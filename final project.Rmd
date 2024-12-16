@@ -519,18 +519,100 @@ plot(best_summary$bic,
      ylab = "BIC")
 par(mfrow = c(1, 1))
 ```
-All the procedures generated the same model.
+```{r interacting effects}
+# Define predictors
+predictors <- c("race", "marital_status", "x6th_stage", "grade", 
+                "estrogen_status", "progesterone_status", "rn_examined_log", "age_log")
+
+# Create a dataframe to store results
+interaction_results <- data.frame(
+  Predictor1 = character(),
+  Predictor2 = character(),
+  P_Value = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Loop through each pair of predictors
+for (i in seq_along(predictors)) {
+  for (j in seq_along(predictors)) {
+    if (i < j) {
+      predictor1 <- predictors[i]
+      predictor2 <- predictors[j]
+      
+      # Fit interaction model
+      formula <- as.formula(paste("status ~", paste(predictors, collapse = " + "), 
+                                  "+", predictor1, "*", predictor2))
+      interaction_model <- glm(formula, family = binomial, data = model_data_3)
+      
+      # Extract interaction term
+      interaction_term <- paste(predictor1, predictor2, sep = ":")
+      coef_names <- names(coef(interaction_model))
+      
+      if (interaction_term %in% coef_names) {
+        # Extract p-value for the interaction term
+        p_value <- coef(summary(interaction_model))[interaction_term, "Pr(>|z|)"]
+        
+        # Append to results if p-value < 0.05
+        if (p_value < 0.05) {
+          interaction_results <- rbind(interaction_results, 
+                                       data.frame(Predictor1 = predictor1, 
+                                                  Predictor2 = predictor2, 
+                                                  P_Value = p_value, 
+                                                  stringsAsFactors = FALSE))
+        }
+      }
+    }
+  }
+}
+
+# Sort results by p-value
+interaction_results <- interaction_results[order(interaction_results$P_Value), ]
+print(interaction_results)
+```
+Since resulting dataframe is empty, it suggests that none of the interaction terms tested in our dataset have p-values less than 0.05. This outcome aligns with our earlier exploratory analyses (Cramér’s V, correlation matrix, and model diagnostics), which indicated that interaction effects are likely weak or non-existent in your data.
+
+#### Final Model
+Since Best subset selection evaluates all possible combinations of predictors (including all levels of factor variables) to find the model with the best fit according to criteria like adjusted R2, Cp and BIC, each level of a factor variable (e.g., x6th_stageIIIA) can be treated as an independent binary variable (dummy variable) in this process. Thus we will not use the best subset selection , as we need consider the factor as a whole for interpretability.
+
+The final model was chosen through forward, backward, and stepwise selection methods using AIC as the selection criterion. The model balances interpretability and predictive performance, including only significant predictors that contribute to understanding survival outcomes: 
+
 `glm(formula = status ~ race + marital_status + x6th_stage + grade + estrogen_status + progesterone_status + rn_examined_log + age_log, family = binomial, data = model_data_3)`
 
-describe your final model to  predict the risk of death.and interpret its parameters in an accurate and useful manner, explore several candidate models, and explain why you selected your model.
+In logistic regression, coefficients represent the change in the log-odds of the outcome (`status` = Dead) for a one-unit increase in a predictor, holding other variables constant. Odds ratios provide a more interpretable measure.
 
-Which factors (features) affect the risk significantly? Are there interacting effects?
+The key coefficients included are
+1. Race:
+- raceBlack: Positive coefficient implies higher odds of death for Black patients compared to the reference group (White patients). Odds ratio > 1 indicates increased risk for Black patients.
+- raceOther: Negative coefficient indicates slightly reduced odds of death for patients classified as "Other" compared to White patients.
 
+2. Marital Status:
+The marital status categories have weak effects (some not statistically significant). For instance, being married or widowed appears to have no strong association with survival compared to the reference group.
+
+3. Adjusted AJCC 6th stage (`x6th_stage`): is the strongest predictor of death risk.
+Higher stages (IIIA, IIIB, IIIC) significantly increase the odds of death compared to stage IIA (reference group). Patients in stage IIIC have the highest odds of death, indicating advanced tumor progression is a critical predictor of survival.
+
+4. Tumor Grade (`grade`): Grades 3 and 4 significantly increase the odds of death compared to Grade 1, indicating poorly differentiated tumors are associated with worse outcomes.
+
+5. Hormone Receptor Status:
+`estrogen_statusPositive` and `progesterone_statusPositive`: Negative coefficients suggest reduced odds of death for patients with positive estrogen or progesterone receptor status. This reflects the improved prognosis often associated with hormone-sensitive tumors.
+
+6. Log-transformed Predictors:
+-`rn_examined_log`: Negative coefficient indicates increased survival odds with more regional lymph nodes examined. This might reflect more aggressive or effective treatment strategies.
+-`age_log`: Positive coefficient implies older patients are at higher risk of death.
+
+So `x6th_stage`, `grade`, `estrogen_statusPositive` and `progesterone_statusPositive`, `age_log` and `rn_examined_log` are significant predictors affecting the risk.
+
+#### Model Performance
 Evaluate the performance of your model(s). Is your model achieving similar performance
 between the majority race group “White” and the minority “Black” (or “Black” + “Other”)? If
 not, could you try to improve the fairness (i.e., reducing the gap of prediction performance
 between the majority and minority) of your model(s)?
 
+```{r performance}
+data_white <- model_data_3 %>% filter(race == "White")
+data_minority <- model_data_3 %>% filter(race != "White")
+
+```
 
 ## Conclusion
 1. Your report should include a table summarizing parameter estimates associated with your final fitted model, characterizing predictor variables in a way that a reader can clearly understand
