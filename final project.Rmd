@@ -16,6 +16,10 @@ library(caret)
 library(corrplot)
 library(lsr)
 library(vcd)
+library(car)
+library(gridExtra)
+library(robustbase)
+
 ```
 
 ## Data Cleaning and Preprocessing
@@ -163,7 +167,7 @@ ggplot(model_data, aes(x = race, fill = status)) +
   )
 
 # Combine "Black" and "Other" into a single group "Minority Non-White"
-model_data <- model_data %>%
+model_data_race_combined <- model_data %>%
   mutate(
     race_combined = case_when(
       race == "White" ~ "Majority White",
@@ -173,7 +177,7 @@ model_data <- model_data %>%
   )
 
 # Proportional Bar Plot for Combined Race Groups
-ggplot(model_data, aes(x = race_combined, fill = status)) +
+ggplot(model_data_race_combined, aes(x = race_combined, fill = status)) +
   geom_bar(position = "fill", alpha = 0.8, color = "black") +
   scale_fill_manual(values = c("Alive" = "gold", "Dead" = "lightblue")) +
   theme_minimal() +
@@ -206,7 +210,7 @@ for (col in names(df1)) {
 }
 par(mfrow = c(1, 1))
 ```
-Histograms were created for each continuous variable to visually examine their distributions and identify potential skewness. The results revealed that, except for `age`, the other three variables exhibited significant right skewness, indicating the need for transformation.
+Histograms were created for each continuous variable to visually examine their distributions and identify potential skewness. The results revealed that, except for `age`, the other three variables exhibited significant right skewness, indicating the need for transformation if we want to perform linear regression. Though we are not doing linear regression, transformation has still been performed here, we see that after performing log-transformation, there is a improvement on the skewness of `tumor_size`, `regional_node_examined` and `reginol_node_positive`.
 
 ```{r transformation}
 df_log <- df1 %>%
@@ -218,7 +222,7 @@ df_log <- df1 %>%
   )
 
 par(mfrow = c(2, 4))
-for (col in continuous_vars) {
+for (col in names(df_log)) {
   hist(
     df_log[[col]],
     main = paste("Histogram of", col),
@@ -228,11 +232,10 @@ for (col in continuous_vars) {
   )
 }
 par(mfrow = c(1, 1))
+
 ```
 
-we see that after performing log-transformation, there is a improve on the skewness of the three variables.
-
-Boxplots were then generated for each continuous variable stratified by survival status to visually assess their relationships with the binary outcome. Both the original and transformed data boxplots were presented side by side to highlight the impact of the transformation.
+Boxplots were then generated for each continuous variable stratified by survival status to visually assess their relationships with the binary outcome. 
 
 ```{r age}
 # Age by survival status
@@ -298,7 +301,9 @@ ggplot(model_data, aes(x = status, y = reginol_node_positive, fill = status)) +
 ```
 
 ### Pairwise Relationships and Interactions
-```{r}
+```{r pairwise}
+correlation_matrix <- cor(continuous_vars, use = "pairwise.complete.obs")
+
 # Pairwise relationships (correlation matrix for continuous variables)
 corrplot(correlation_matrix, method = "circle", 
          type = "upper", tl.col = "black", addCoef.col = "grey", 
@@ -308,5 +313,144 @@ A correlation matrix was generated to examine the relationships between the vari
 Small circles (near-zero correlations) are observed for age and all other variables; tumor_size and regional_node_examined suggesting weak or no relationships.
 `regional_node_positive` is moderately associated with both `tumor size` (0.24) and `regional nodes examined` (0.41), which might influence modeling decisions.
 There are no strong correlations (close to ±1), suggesting no immediate multicollinearity issues among these variables.
+
+## Modeling - Logistic Regression
+Since the outcome is Binary (e.g., Alive/Dead), We decide to proceed with logistic regression instead of linear regression.
+Logistic regression outputs odds ratios, which are more interpretable for binary classification problems. For example, it tells you how much the odds of death increase with a unit increase in a predictor.
+
+### Checking Assumptions and Transformations
+#### Binary or Dichotomous Response Variable
+```{r binary response}
+unique(model_data$status)
+```
+The response variable (status) has exactly two categories: Alive and Dead.
+
+#### No Multicollinearity
+```{r multicollinearity1}
+# Fit an initial logistic regression model
+model_data_1 <- model_data %>%
+  mutate(
+    race = relevel(race, ref = "White"),  # Set "White" as reference
+    grade = relevel(grade, ref = "1"),    # Set "Grade 1" as reference
+    x6th_stage = relevel(x6th_stage, ref = "IIA") # Set "IIA" as reference
+  )
+
+alias(glm(status ~ ., data = model_data_1, family = binomial))
+```
+From the alias() output:
+grade2, grade3, and grade4 are collinear with other predictors.
+x6th_stageIIIC is collinear with n_stage or other levels of x6th_stage.
+differentiate levels also overlap in prediction with grade.
+
+Given that both `x6th_stage` and `n_stage` are strong predictors, with `x6th_stage` showing a slightly higher association, `n_stage` can be dropped as its information is already captured by `x6th_stage`. Similarly, `t_stage`, which is related to tumor size, can also be removed to avoid redundancy. The variable `differentiate` can be excluded as well, as it overlaps with `grade`, with both variables reflecting tumor differentiation. In the context of breast cancer, "regional node positive" indicates the presence of cancer cells in nearby lymph nodes, while "regional node examined" refers to the surgical removal and analysis of these nodes to determine cancer spread. From the previous correlation matrix, `regional_node_positive` shows a moderate association with both `tumor size` (0.24) and `regional_node_examined` (0.41), suggesting some redundancy. To simplify the model and minimize multicollinearity, we choose to drop `regional_node_positive`.
+
+```{r multicollinearity1}
+model_data_2 <- model_data_1 %>%
+  select(-differentiate, -n_stage, -t_stage, -reginol_node_positive)
+
+alias(glm(status ~ ., data = model_data_2, family = binomial))
+
+# Fit an initial logistic regression model
+model_vif <- glm(status ~ ., data = model_data_2, family = binomial)
+
+# Check VIF for predictors
+vif_values <- vif(model_vif)
+print(vif_values)
+
+# Identify predictors with VIF > 5 (indicating multicollinearity)
+vif_values[vif_values > 5]
+```
+The results show that all VIF values are below 5, which indicates that multicollinearity is no longer a concern in your logistic regression model.
+
+#### Linear Relationship to Log Odds
+```{r Log Odds}
+continuous_vars_log_odds <- model_data_2 %>%
+  select(age, tumor_size, regional_node_examined, status) %>%  # Include 'status'
+  na.omit()
+
+# Log-transform tumor size and regional nodes examined
+df_log_odds <- continuous_vars_log_odds %>%
+  mutate(
+    age_log = log(age + 1),
+    tumor_size_log = log(tumor_size + 1),
+    rn_examined_log = log(regional_node_examined + 1)
+  )
+
+linearity_test <- glm(status ~ age_log + tumor_size_log + rn_examined_log, 
+                      data = df_log_odds, 
+                      family = binomial)
+
+df_log_odds$logit <- predict(linearity_test, type = "link") 
+
+
+plot1 <- ggplot(df_log_odds, aes(x = age_log, y = logit)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "loess", color = "purple") +
+  labs(title = "Logit vs Age (Log-Transformed)", 
+       x = "Log(Age + 1)", y = "Logit (Log Odds)") +
+  theme_minimal()
+
+plot2 <- ggplot(df_log_odds, aes(x = tumor_size_log, y = logit)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "loess", color = "purple") +
+  labs(title = "Logit vs Tumor Size (Log-Transformed)", x = "Log(Tumor Size + 1)", y = "Logit (Log Odds)") +
+  theme_minimal()
+
+plot3 <- ggplot(df_log_odds, aes(x = rn_examined_log, y = logit)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "loess", color = "purple") +
+  labs(title = "Logit vs Regional Nodes Examined (Log-Transformed)", 
+       x = "Log(Regional Nodes Examined + 1)", y = "Logit (Log Odds)") +
+  theme_minimal()
+
+grid.arrange(plot1, plot2, plot3, ncol = 3)
+
+# Update
+model_data_3 <- model_data_2 %>%
+  mutate(
+    tumor_size_log = log(tumor_size + 1),
+    rn_examined_log = log(regional_node_examined + 1),
+    age_log = log(age + 1)
+  ) %>%
+  select(-tumor_size, -regional_node_examined, -age) 
+```
+From the plot, we see that there's a linear relationship between continuous predictors (log transformed) and the log odds of the outcome. 
+
+#### No Extreme Outliers
+
+```{r outliers}
+# Fit logistic regression model with log-transformed predictors
+model_vif <- glm(status ~ age_log + tumor_size_log + rn_examined_log + grade + x6th_stage + race, 
+                 data = model_data_3, family = binomial)
+
+# Calculate Cook's Distance
+cooksD <- cooks.distance(model_vif)
+
+# Plot Cook's Distance
+plot(cooksD, pch = 20, main = "Cook's Distance for Outlier Detection")
+abline(h = 4 / nrow(model_data_3), col = "red")
+
+# Identify influential observations
+influential_obs <- which(cooksD > 4 / nrow(model_data_3))
+
+# Build Model
+model_no_outliers <- glm(status ~ age_log + tumor_size_log + rn_examined_log + grade + x6th_stage + race, 
+                         data = model_data_3[-influential_obs, ], family = binomial)
+
+model_robust <- glmrob(status ~ age_log + tumor_size_log + rn_examined_log + grade + x6th_stage + race,
+                       data = model_data_3, family = binomial, method = "Mqle")
+
+# Compare summary statistics
+summary(model_vif)  # Original model
+summary(model_no_outliers)  # Model without influential points
+summary(model_robust)
+```
+In large datasets, Cook's Distance*can flag numerous observations as influential, often due to large sample size. These flagged points may represent true variability in the population rather than errors.
+The code results indicate that removing influential points harms the model, likely by disrupting essential data structure. Coefficients for variables like `grade`, `x6th_stage`, and `race` became unstable and unreliable, with extreme standard errors.  
+In contrast, the robust logistic regression* (`model_robust`) provided stable and reliable estimates while effectively mitigating the impact of influential observations. Key predictors, such as `age_log`, `rn_examined_log`, `grade`, `x6th_stage`, and `race`, retained coefficients similar to the standard logistic regression.  
+The robustness weights further show that about 12% of the data (482 out of 4024 observations) had reduced influence, while the majority (~88%, or 3542 observations) remained largely unaffected with weights close to 1. This approach accounts for influential points by down-weighting their impact, ensuring the model is less sensitive to extreme values without the need to remove data.
+
+#### Independence of Errors
+Since there are no group IDs, the independence assumption is satisfied.
 
 
