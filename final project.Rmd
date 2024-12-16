@@ -3,8 +3,12 @@ title: "final project"
 author: "Yixin Zheng"
 date: "`r Sys.Date()`"
 output: pdf_document
+header-includes:
+   - \DeclareUnicodeCharacter{2581}{\rule{0.5em}{0.1em}} % U+2581 as a small horizontal line
+   - \DeclareUnicodeCharacter{2583}{\rule{0.5em}{0.3em}} % U+2583 taller bar
+   - \DeclareUnicodeCharacter{2587}{\rule{0.5em}{0.6em}} % U+2587 even taller bar
+   - \DeclareUnicodeCharacter{2588}{\rule{0.5em}{1em}}   % U+2588 full-height block
 ---
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
@@ -312,7 +316,7 @@ corrplot(correlation_matrix, method = "circle",
 A correlation matrix was generated to examine the relationships between the variables.
 Small circles (near-zero correlations) are observed for age and all other variables; tumor_size and regional_node_examined suggesting weak or no relationships.
 `regional_node_positive` is moderately associated with both `tumor size` (0.24) and `regional nodes examined` (0.41), which might influence modeling decisions.
-There are no strong correlations (close to ±1), suggesting no immediate multicollinearity issues among these variables.
+There are no strong correlations (close to +-1), suggesting no immediate multicollinearity issues among these variables.
 
 ## Modeling - Logistic Regression
 Since the outcome is Binary (e.g., Alive/Dead), We decide to proceed with logistic regression instead of linear regression.
@@ -344,7 +348,7 @@ differentiate levels also overlap in prediction with grade.
 
 Given that both `x6th_stage` and `n_stage` are strong predictors, with `x6th_stage` showing a slightly higher association, `n_stage` can be dropped as its information is already captured by `x6th_stage`. Similarly, `t_stage`, which is related to tumor size, can also be removed to avoid redundancy. The variable `differentiate` can be excluded as well, as it overlaps with `grade`, with both variables reflecting tumor differentiation. In the context of breast cancer, "regional node positive" indicates the presence of cancer cells in nearby lymph nodes, while "regional node examined" refers to the surgical removal and analysis of these nodes to determine cancer spread. From the previous correlation matrix, `regional_node_positive` shows a moderate association with both `tumor size` (0.24) and `regional_node_examined` (0.41), suggesting some redundancy. To simplify the model and minimize multicollinearity, we choose to drop `regional_node_positive`.
 
-```{r multicollinearity1}
+```{r multicollinearity2}
 model_data_2 <- model_data_1 %>%
   dplyr::select(-differentiate, -n_stage, -t_stage, -reginol_node_positive)
 
