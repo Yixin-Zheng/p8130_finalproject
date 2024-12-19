@@ -1,13 +1,17 @@
 ---
-title: "final project"
-author: "Yixin Zheng, Ada Gao, Khue Nguyen"
-date: "`r Sys.Date()`"
-output: pdf_document
+title: "Final Project: Prediction of survival rate for breast cancer patients"
+author: "Yixin Zheng, Shangzi Gao, Khue Nguyen"
+output: 
+  pdf_document:
+fontsize: 12pt
+geometry: a4paper, margin=1in
 header-includes:
-   - \DeclareUnicodeCharacter{2581}{\rule{0.5em}{0.1em}} % U+2581 as a small horizontal line
-   - \DeclareUnicodeCharacter{2583}{\rule{0.5em}{0.3em}} % U+2583 taller bar
-   - \DeclareUnicodeCharacter{2587}{\rule{0.5em}{0.6em}} % U+2587 even taller bar
-   - \DeclareUnicodeCharacter{2588}{\rule{0.5em}{1em}}   % U+2588 full-height block
+  - \usepackage{setspace}
+  - \doublespacing
+  - \DeclareUnicodeCharacter{2581}{\rule{0.5em}{0.1em}} % U+2581 as a small horizontal line
+  - \DeclareUnicodeCharacter{2583}{\rule{0.5em}{0.3em}} % U+2583 taller bar
+  - \DeclareUnicodeCharacter{2587}{\rule{0.5em}{0.6em}} % U+2587 even taller bar
+  - \DeclareUnicodeCharacter{2588}{\rule{0.5em}{1em}}   % U+2588 full-height block
 editor_options: 
   markdown: 
     wrap: 72
@@ -32,15 +36,8 @@ library(pROC)
 library(knitr)
 ```
 
-## Motivation
-
-Breast cancer prognosis is essential for guiding treatment and improving
-patient survival. This study uses logistic regression to identify key
-factors that influence whether patients survive or not (status: Alive or
-Dead). The goal is to build a clear and understandable model to predict
-survival and see how well it works across different racial groups. It
-also focuses on fairness by examining performance differences between
-groups and finding ways to improve generalizability of the model.
+## Abstract
+ 
 
 ## Data Cleaning and Preprocessing
 
