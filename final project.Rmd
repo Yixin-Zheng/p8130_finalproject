@@ -1,10 +1,10 @@
 ---
-title: "Final Project: Prediction of survival rate for breast cancer patients"
+title: "Prediction of survival rate for breast cancer patients"
 author: "Yixin Zheng, Shangzi Gao, Khue Nguyen"
 output: 
   pdf_document:
 fontsize: 12pt
-geometry: a4paper, margin=1in
+geometry: a4paper, margin = 0.5 in
 header-includes:
   - \usepackage{setspace}
   - \doublespacing
@@ -37,9 +37,70 @@ library(knitr)
 ```
 
 ## Abstract
-Breast cancer is a leading cause of cancer-related mortality among women worldwide. This study develops a predictive model for survival outcomes in breast cancer patients using logistic regression, leveraging demographic, clinical, and pathological factors from a prospective cohort dataset. The analysis focuses on identifying key predictors of mortality, evaluating model performance across racial groups, and addressing fairness in prediction accuracy. Tumor stage, grade, and hormone receptor status emerged as significant predictors. The initial logistic regression model achieved a moderate performance, with an area under the receiver operating characteristic curve (ROC-AUC) of 0.74. However, disparities in model performance were observed between racial groups, prompting the implementation of reweighting strategies to enhance fairness. These findings highlight the importance of equitable modeling approaches to improve prognostic accuracy and clinical outcomes in breast cancer care.  
 
-## Data Cleaning and Preprocessing
+Breast cancer is a leading cause of cancer-related mortality among women
+worldwide. This study develops a predictive model for survival outcomes
+in breast cancer patients using logistic regression, leveraging
+demographic, clinical, and pathological factors from a prospective
+cohort dataset. The analysis focuses on identifying key predictors of
+mortality, evaluating model performance across racial groups, and
+addressing fairness in prediction accuracy. Tumor stage, grade, and
+hormone receptor status emerged as significant predictors. The initial
+logistic regression model achieved a moderate performance, with an area
+under the receiver operating characteristic curve (ROC-AUC) of 0.74.
+However, disparities in model performance were observed between racial
+groups, prompting the implementation of reweighting strategies to
+enhance fairness. These findings highlight the importance of equitable
+modeling approaches to improve prognostic accuracy and clinical outcomes
+in breast cancer care.
+
+## Introduction
+
+Breast cancer has a high prevalence with average X new cases each year
+worldwide. Approximately 13.1 % of female are diagnosed with breast
+cancer at some point in their lifetime. This type of cancer accounts for
+23% of total cancer cases and 14% of cancer deaths$^1$. Recent years
+with the advances in understanding of disease diagnosis and the
+effective tailored treatments, the mortality rate has decreased$^2$.
+According to research, survival of breast cancer depends on various
+factors including the tumor size, the grade of tumor$^3$, cancer stage,
+lymph node stages, and socioeconomic and race$^4$ . In several published
+models with data from various regions, the most important predictors of
+survival rates are the prognostic factors of tumor sizes and grade of
+tumor and, age at diagnosis 5. Patients at younger age when they were
+diagnosed with breast cancer at the same stage are more likely to live
+longer compared to older patients. Some data also showed that racial and
+socioeconomic status can explain the survival rate variation among the
+groups with the same prognostic indicators. For example, lower-income
+patients often have late diagnosis and the African American population
+also has a lower survival rate. However, these models yielded different
+suboptimal results based on the available data source. This report
+examines data from a prospective cohort of breast cancer patients, which
+includes variables including demographic, clinical, and pathological
+factors. The primary aims are to predict mortality risk, identify
+significant predictors, and assess the fairness and performance of
+predictive models across racial groups. By achieving these objectives,
+this analysis seeks to offer meaningful insights into improving breast
+cancer outcomes and addressing healthcare disparities.
+
+## Methods
+
+**Data Description** The dataset includes 10 categorical variables: race
+(Black, White, Other), marital status (Divorced, Married, Separated,
+Single, Widowed), tumor stage (T1, T2, T3, T4), lymph node stage (N1,
+N2, N3), adjusted AJCC 6th stage (IIA, IIB, IIIA, IIIB, IIIC), tumor
+differentiation (Well, Moderately, Poorly, Undifferentiated), grade
+(1–4), tumor spread stage (Regional, Distant), estrogen receptor status
+(Positive, Negative), and progesterone receptor status (Positive,
+Negative). Additionally, there are 4 continuous variables: age, tumor
+size, regional nodes examined, and regional nodes positive.
+
+**Data Cleaning** Column headers were renamed, categorical variables
+were converted to factors. tumor grade levels were recoded to ensure
+interpretability. Missing values were assessed, and log transformations
+were applied to highly skewed continuous variables (tumor size, regional
+nodes examined, and regional nodes positive) to normalize their
+distributions.
 
 ```{r data import and initial tidy, include = FALSE}
 # Import data and clean column names
@@ -76,11 +137,20 @@ model_data <- model_data %>%
 summary(model_data)
 ```
 
-## Exploratory Data Analysis
+**EDA Methods** `skim()` function is applied to the dataset
+(`model_data`) to compute detailed summary statistics for all variables.
+(table.1 & 2), Group-wise key statistics are calculated based on
+survival status(tabel.3) Cramér's V was used to quantify the strength of
+the association between categorical variables and the binary outcome
+(Alive/Dead), with values ranging from 0 (no association) to 1 (perfect
+association). Distributional plots, including proportional bar plots for
+race groups and histograms for continuous variables, were created to
+visualize the data. Boxplots stratified by survival status were used to
+explore relationships between continuous variables and the binary
+outcome. A correlation matrix for continuous variables was generated to
+assess pairwise relationship between variables.
 
-### Summary statistics
-
-```{r Summary statistics, echo = FALSE}
+```{r EDA - Summary statistics, echo = FALSE}
 # Summary statistics for continuous and categorical variables
 skimmed_data <- skim(model_data)
 
@@ -112,43 +182,6 @@ summary_by_status <- model_data %>%
 
 write.csv(summary_by_status, "tables/summary_by_status.csv", row.names = FALSE)
 ```
-
-### Distribution Visualization
-
-#### Categorical Variables
-
-Our modified dataset contains **10 categorical variables**:
-
-\- **race**: Patient’s race (Black, White, Other).
-
-\- **marital_status**: Patient’s marital status (Divorced, Married,
-Separated, Single, Widowed).
-
-\- **t_stage**: Tumor stage (T1, T2, T3, T4). ("T" refers to the size of
-the primary tumor)
-
-\- **n_stage**: Lymph node stage (N1, N2, N3). (extent of cancer spread
-to nearby lymph nodes)
-
-\- **x6th_stage**: Adjusted AJCC 6th stage (IIA, IIB, IIIA, IIIB, IIIC).
-
-\- **differentiate**: Tumor differentiation (Well, Moderately, Poorly,
-Undifferentiated). - **grade**: Grade of the tumor (1–4).
-
-\- **a_stage**: Tumor spread stage (Regional, Distant).
-
-\- **estrogen_status**: Estrogen receptor status (Positive, Negative).
-
-\- **progesterone_status**: Progesterone receptor status (Positive,
-Negative).
-
-To examine the association of these variables with the binary outcome
-`status` (Alive/Dead), I used **Cramér's V**, which quantifies the
-strength of the association between two categorical variables based on
-the Chi-Square statistic. Cramér's V ranges from **0** (no association)
-to **1** (perfect association). This method helps identify the
-predictors most strongly associated with survival status, enabling us to
-prioritize variables for modeling.
 
 ```{r categorical varibales, echo = FALSE, warning =FALSE}
 # Define categorical variables to analyze
@@ -195,34 +228,6 @@ cramerV_association <- ggplot(association_df, aes(x = reorder(Variable, CramersV
 ggsave("plots/cramerV_association.png", plot = cramerV_association, width = 8, height = 6)
 ```
 
-The plot shows the strength of association (Cramér’s V) between
-**survival status** and each categorical predictor:
-
-1.  **x6th_stage** and **n_stage** have the **highest Cramér's V
-    values** (around 0.25), indicating they are the most informative
-    predictors of survival status in the dataset. These variables
-    reflect tumor stage and lymph node involvement, which are critical
-    factors in breast cancer prognosis.
-
-2.  **Estrogen_status**, **progesterone_status**, and **grade** exhibit
-    **moderate associations** (Cramér’s V around 0.15–0.2). These
-    variables provide meaningful information about hormone status and
-    differentiation, making them important contributors to survival
-    prediction.
-
-3.  **Differentiate** and **t_stage** show moderate but slightly lower
-    associations compared to the top variables, suggesting their
-    relevance to survival status.
-
-4.  **a_stage**, **marital_status**, and **race** have **lower Cramér’s
-    V values** (less than 0.1), indicating weaker associations with
-    survival status. Although these variables contribute limited
-    information individually, they may still be useful in interaction
-    terms or when combined with other predictors.
-
-By focusing on variables with higher Cramér’s V values, we can build
-more efficient and predictive models for survival status analysis.
-
 ```{r race, echo = FALSE}
 # Proportional Bar Plot for Survival Status by Race
 race_barplot <- ggplot(model_data, aes(x = race, fill = status)) +
@@ -262,15 +267,7 @@ race_combined_barplot <- ggplot(model_data_race_combined, aes(x = race_combined,
 ggsave("plots/race_combined_proportional_barplot.png", plot = race_combined_barplot, width = 6, height = 4)
 ```
 
-Both plots confirm a disparity in survival outcomes across racial
-groups. Non-White patients, particularly Black patients, show a higher
-likelihood of death. Effect of Combining Groups: Combining Black and
-Other into Minority Non-White simplifies the comparison and reduce the
-racial disparities between Majority White and Minority Non-White groups.
-
-#### Continuous Variables
-
-```{r continuous variables, include = FALSE}
+```{r histogram, include = FALSE}
 continuous_vars <- model_data %>%
   dplyr::select(age, tumor_size, regional_node_examined, reginol_node_positive) %>%
   na.omit()
@@ -293,17 +290,7 @@ hist_grid <- marrangeGrob(hist_list, nrow = 1, ncol = 4)
 ggsave("plots/original_histograms_grid.png", hist_grid, width = 16, height = 4)
 ```
 
-Histograms were created for each continuous variable to visually examine
-their distributions and identify potential skewness. The results
-revealed that, except for `age`, the other three variables exhibited
-significant right skewness, indicating the need for transformation if we
-want to perform linear regression. Though we are not doing linear
-regression, transformation has still been performed here, we see that
-after performing log-transformation, there is a improvement on the
-skewness of `tumor_size`, `regional_node_examined` and
-`reginol_node_positive`.
-
-```{r transformation, include = FALSE}
+```{r transform hist, include = FALSE}
 df_log <- df1 %>%
   dplyr::select(-tumor_size, -regional_node_examined, -reginol_node_positive) %>%
   mutate(
@@ -327,10 +314,6 @@ log_hist_list <- lapply(names(df_log), function(col) {
 log_hist_grid <- marrangeGrob(log_hist_list, nrow = 1, ncol = 4)
 ggsave("plots/log_transformed_histograms_grid.png", log_hist_grid, width = 16, height = 4)
 ```
-
-Boxplots were then generated for each continuous variable stratified by
-survival status to visually assess their relationships with the binary
-outcome.
 
 ```{r age, include = FALSE}
 # Age by survival status
@@ -401,8 +384,6 @@ rn_positive_boxplot <- ggplot(model_data, aes(x = status, y = reginol_node_posit
 ggsave("plots/rn_positive_by_status_boxplot.png", plot = rn_positive_boxplot, width = 6, height = 4)
 ```
 
-### Pairwise Relationships and Interactions
-
 ```{r pairwise, include = FALSE}
 correlation_matrix <- cor(continuous_vars, use = "pairwise.complete.obs")
 
@@ -424,35 +405,25 @@ correlation_plot()
 dev.off()
 ```
 
-A correlation matrix was generated to examine the relationships between
-the variables. Small circles (near-zero correlations) are observed for
-age and all other variables; tumor_size and regional_node_examined
-suggesting weak or no relationships. `regional_node_positive` is
-moderately associated with both `tumor size` (0.24) and
-`regional nodes examined` (0.41), which might influence modeling
-decisions. There are no strong correlations (close to +-1), suggesting
-no immediate multicollinearity issues among these variables.
-
-## Modeling - Logistic Regression
-
-Since the outcome is Binary (e.g., Alive/Dead), We decide to proceed
-with logistic regression instead of linear regression. Logistic
-regression outputs odds ratios, which are more interpretable for binary
-classification problems. For example, it tells you how much the odds of
-death increase with a unit increase in a predictor.
-
-### Checking Assumptions and Transformations
-
-#### Binary or Dichotomous Response Variable
+**Modeling Assumptions and Transformations** Logistic regression was
+chosen as the primary method due to the binary nature of the outcome.
+Assumptions checked are: 1. The response variable (status) was confirmed
+to be binary by code.
 
 ```{r binary response, include = FALSE}
+# Binary or Dichotomous Response Variable
 unique(model_data$status)
+#The response variable (status) has exactly two categories: Alive and Dead.
+
 ```
 
-The response variable (status) has exactly two categories: Alive and
-Dead.
-
-#### No Multicollinearity
+2\. The `alias()` function identified collinearity between models:
+grade2, grade3, and grade4 with other predictors, x6th_stageIIIC with
+n_stage, and differentiate with grade. For simplification, some
+variables were removed: x6th_stage captures n_stage's information,
+n_stage was dropped. t_stage (linked to tumor size), differentiate
+(overlapping with grade), and regional_node_positive (redundant with
+tumor size and regional_node_examined) were removed.
 
 ```{r multicollinearity1, echo = FALSE}
 # Fit an initial logistic regression model
@@ -467,28 +438,11 @@ alias_results <- capture.output(alias(glm(status ~ ., data = model_data_1, famil
 
 # Save the results to a text file in the `results` folder
 writeLines(alias_results, "results/alias_results_model1.txt")
+
 ```
 
-From the alias() output: grade2, grade3, and grade4 are collinear with
-other predictors. x6th_stageIIIC is collinear with n_stage or other
-levels of x6th_stage. differentiate levels also overlap in prediction
-with grade.
-
-Given that both `x6th_stage` and `n_stage` are strong predictors, with
-`x6th_stage` showing a slightly higher association, `n_stage` can be
-dropped as its information is already captured by `x6th_stage`.
-Similarly, `t_stage`, which is related to tumor size, can also be
-removed to avoid redundancy. The variable `differentiate` can be
-excluded as well, as it overlaps with `grade`, with both variables
-reflecting tumor differentiation. In the context of breast cancer,
-"regional node positive" indicates the presence of cancer cells in
-nearby lymph nodes, while "regional node examined" refers to the
-surgical removal and analysis of these nodes to determine cancer spread.
-From the previous correlation matrix, `regional_node_positive` shows a
-moderate association with both `tumor size` (0.24) and
-`regional_node_examined` (0.41), suggesting some redundancy. To simplify
-the model and minimize multicollinearity, we choose to drop
-`regional_node_positive`.
+VIF were calculated, to ensure that all values were below 5 (table.4),
+indicating no multicollinearity. (dataset updated with dropped variable)
 
 ```{r multicollinearity2, echo = FALSE}
 model_data_2 <- model_data_1 %>%
@@ -509,11 +463,9 @@ colnames(vif_df) <- c("Variable", "GVIF", "Df", "GVIF_Ratio")
 write.csv(vif_df, "tables/vif.csv", row.names = FALSE)
 ```
 
-The results show that all VIF values are below 5, which indicates that
-multicollinearity is no longer a concern in your logistic regression
-model.
-
-#### Linear Relationship to Log Odds
+3\. Continuous predictors were log-transformed, and their relationships
+with the log odds were examined (fig.12). This confirmed linearity.
+(dataset updated with transformed variable)
 
 ```{r Log Odds, include = FALSE, message = FALSE}
 continuous_vars_log_odds <- model_data_2 %>%
@@ -568,10 +520,8 @@ model_data_3 <- model_data_2 %>%
   dplyr::select(-tumor_size, -regional_node_examined, -age) 
 ```
 
-From the plot, we see that there's a linear relationship between
-continuous predictors (log transformed) and the log odds of the outcome.
-
-#### No Extreme Outliers
+4\. Independence of Errors: Since there were no group-level structures,
+the independence assumption was satisfied.
 
 ```{r outliers1, include = FALSE}
 # Fit logistic regression model with log-transformed predictors
@@ -609,18 +559,18 @@ unstable_coeffs <- which(
 )
 unstable_coeffs_df <- data.frame(
   Variable = rownames(full_coefficients)[unstable_coeffs],
-  Full_Model_Coefficient = full_coefficients[unstable_coeffs, "Estimate"],
-  Full_Model_SE = full_coefficients[unstable_coeffs, "Std. Error"],
-  No_Outliers_Coefficient = no_outliers_coefficients[unstable_coeffs, "Estimate"],
+  Full_Coef = full_coefficients[unstable_coeffs, "Estimate"],
+  Full_SE = full_coefficients[unstable_coeffs, "Std. Error"],
+  No_Outliers_Coef = no_outliers_coefficients[unstable_coeffs, "Estimate"],
   No_Outliers_SE = no_outliers_coefficients[unstable_coeffs, "Std. Error"],
-  Robust_Coefficient = robust_coefficients[rownames(full_coefficients)[unstable_coeffs], "Estimate"],
+  Robust_Coef = robust_coefficients[rownames(full_coefficients)[unstable_coeffs], "Estimate"],
   Robust_SE = robust_coefficients[rownames(full_coefficients)[unstable_coeffs], "Std. Error"]
 )
 
 write.csv(unstable_coeffs_df, "tables/unstable_coefficients.csv", row.names = FALSE)
 ```
 
-```{r outliers2, echo = FALSE}
+```{r outliers2, echo = FALSE, results='hide'}
 # Extract robustness weights
 robust_summary <- capture.output(summary(model_robust))
 start_line <- grep("Robustness weights w.r \\* w.x:", robust_summary)
@@ -629,39 +579,98 @@ desired_section <- robust_summary[start_line:end_line]
 cat(paste(desired_section, collapse = "\n"))
 ```
 
-In large datasets, Cook's Distance can flag numerous observations as
-influential, often due to large sample size. These flagged points may
-represent true variability in the population rather than errors. The
-code results indicate that removing influential points harms the model,
-likely by disrupting essential data structure. Coefficients for
-variables like `grade` and intercept became unstable and unreliable,
-with extreme standard errors.
+5\. Outliers: Cook's Distance identified potential outliers exceeding
+4/n, which flagged numerous points as influential, likely reflecting
+population variability rather than errors (fig.13). Models with and
+without these points were compared. Removing these points destabilized
+coefficients like grade, making them unreliable. Robust logistic
+regression (model_robust) mitigated outliers impact, providing stable
+estimates for predictors (table.5). About 12% of data had reduced
+influence, while most observations remained unaffected. Despite its
+advantages, we opted for the original logistic regression for simplicity
+and familiarity.
 
-In contrast, the robust logistic regression (`model_robust`) provided
-stable and reliable estimates while effectively mitigating the impact of
-influential observations. Key predictors, such as `age_log`,
-`rn_examined_log`, `grade`, `x6th_stage`, and `race`, retained
-coefficients similar to the standard logistic regression. The robustness
-weights further show that about 12% of the data (478 out of 4024
-observations) had reduced influence, while the majority (\~88%, or 3546
-observations) remained largely unaffected with weights close to 1. This
-approach accounts for influential points by down-weighting their impact,
-ensuring the model is less sensitive to extreme values without the need
-to remove data.
+**Model Construction and Selection** Models were constructed using
+predictors identified during EDA and assumption checks. Forward,
+backward, and stepwise selection were applied based on the AIC to select
+the final model. Best subset selection, based on Adjusted
+$R^2,  Cp, BIC$, was also performed. Interaction effects were tested by
+examining pairwise interactions between predictors. The final model was
+chosen using stepwise selection to balance interpretability and
+performance.
 
-While both original and robust logistic regression are viable options
-for future analysis, we will proceed with the original logistic
-regression due to our limited familiarity with robust logistic
-regression techniques
+**Model Validation and Fairness** The model was validated using 10-fold
+cross-validation, evaluating ROC-AUC, sensitivity, and specificity.
+Fairness was assessed by evaluating model performance across racial
+subgroups (White, Black, Other) based on subgroup-specific ROC-AUC
+values. To address disparities, fairness reweighting was applied by
+adjusting model weights to prioritize underrepresented groups. The
+reweighted model's performance was compared with the original,
+highlighting improvements in fairness while maintaining predictive
+accuracy. Predictor coefficients were interpreted as odds ratios,
+quantifying their impact on survival outcomes
 
-#### Independence of Errors
+## Results
 
-Since there are no group IDs, the independence assumption is satisfied.
+### Exploratory Data Analysis
 
-### Model Evaluation and Selection
+The plot shows the strength of association (Cramér’s V) between
+**survival status** and each categorical predictor:
 
-We use original Logistic Regression as the primary models, considering
-its earlier performance.
+1.  **x6th_stage** and **n_stage** have the **highest Cramér's V
+    values** (around 0.25), indicating they are the most informative
+    predictors of survival status in the dataset. These variables
+    reflect tumor stage and lymph node involvement, which are critical
+    factors in breast cancer prognosis.
+
+2.  **Estrogen_status**, **progesterone_status**, and **grade** exhibit
+    **moderate associations** (Cramér’s V around 0.15–0.2). These
+    variables provide meaningful information about hormone status and
+    differentiation, making them important contributors to survival
+    prediction.
+
+3.  **Differentiate** and **t_stage** show moderate but slightly lower
+    associations compared to the top variables, suggesting their
+    relevance to survival status.
+
+4.  **a_stage**, **marital_status**, and **race** have **lower Cramér’s
+    V values** (less than 0.1), indicating weaker associations with
+    survival status. Although these variables contribute limited
+    information individually, they may still be useful in interaction
+    terms or when combined with other predictors.
+
+By focusing on variables with higher Cramér’s V values, we can build
+more efficient and predictive models for survival status analysis.
+
+Both plots (Proportional Bar Plot for Survival Status by Race, or
+combined race group) confirm a disparity in survival outcomes across
+racial groups. Non-White patients, particularly Black patients, show a
+higher likelihood of death. Effect of Combining Groups: Combining Black
+and Other into Minority Non-White simplifies the comparison and reduce
+the racial disparities between Majority White and Minority Non-White
+groups.
+
+Histograms were created for each continuous variable to visually examine
+their distributions and identify potential skewness. The results
+revealed that, except for `age`, the other three variables exhibited
+significant right skewness, indicating the need for transformation if we
+want to perform linear regression. Though we are not doing linear
+regression, transformation has still been performed here, we see that
+after performing log-transformation, there is a improvement on the
+skewness of `tumor_size`, `regional_node_examined` and
+`reginol_node_positive`.
+
+Pairwise Relationships and Interactions: A correlation matrix was
+generated to examine the relationships between the variables. Small
+circles (near-zero correlations) are observed for age and all other
+variables; tumor_size and regional_node_examineds suggesting weak or no
+relationships. `regional_node_positive` is moderately associated with
+both `tumor size` (0.24) and `regional nodes examined` (0.41), which
+might influence modeling decisions. There are no strong correlations
+(close to +-1), suggesting no immediate multicollinearity issues among
+these variables.
+
+### Feature Selection
 
 ```{r variable selection original 1, echo = FALSE}
 # Forward selection
@@ -861,7 +870,7 @@ So `x6th_stage`, `grade`, `estrogen_statusPositive` and
 `progesterone_statusPositive`, `age_log` and `rn_examined_log` are
 significant predictors affecting the risk.
 
-#### Model Performance
+### Model Performance
 
 ```{r performance, echo = FALSE}
 set.seed(123)
@@ -996,8 +1005,6 @@ is now closer to that of the majority group (0.7486).
 
 ## Conclusion
 
-### Table
-
 ```{r conclusion, echo = FALSE}
 # Extract coefficients and confidence intervals from the reweighted model
 summary_reweighted <- summary(reweighted_model$finalModel)
@@ -1025,36 +1032,79 @@ rownames(results_table) <- NULL
 write.csv(results_table, "tables/reweighted_model_results.csv", row.names = FALSE)
 ```
 
-### Finding and Intepretation
+In this report, we derived a model to predict the survival rate of
+breast cancer patients using a logistic model. The most important
+factors are Adjusted AJCC 6th stage (x6th_stage) and grade (Grade of the
+tumor) which agree with the published model in literature. The final
+model was selected through forward, backward, and stepwise selection
+methods using AIC as the selection criterion. The model includes several
+significant predictors including adjusted 6th stage, tumor grade,
+regional lymph nodes status and hormone receptor status. Racial
+disparity is commonly observed among all the disease. In this model, the
+black patient has higher odds of death compared to white patients while
+relatively lower odds of death was calculated for the “Other” race
+category compared to white patients. This disparity may stem from
+differences in access to healthcare, late diagnosis, or biological
+factors. The reweighted model improves fairness across racial groups
+while maintaining overall predictive accuracy. Although the model
+performs slightly worse for minority groups, the gap has been reduced
+compared to the original model. The stages of cancer is the strongest
+predictor of mortality risk (p values ). Higher stages (IIIA,IIIB, IIIC)
+significantly increase the odds of death compared to stage IIA
+(reference group). Patients in stage IIIC have the highest odds of
+death, indicating advanced tumor progression is a critical predictor of
+survival. Tumor grade is another important factor that affect the health
+outcomes. In our model, patients with grade 3 and 4 have significant
+elevated odds of death compared to grade 1 (xxx, number to indicate).
+This result is consistent with literature where many models also
+identified the tumor grade as one of the most significant predictors.
+Our model also indicated the reduced odds of death for patients with
+positive estrogen or progesterone receptor status (number xxx). This
+reflects the improved prognosis often associated with hormone-sensitive
+tumors. Higher survival odds are associated with more regional lymph
+nodes examined. This could reflect the effectiveness of tailored
+treatments to remove the lymph nodes so that the risk of death is
+reduced significantly. The model also showed that the younger the
+patient age at diagnosis is, the higher survival odd given the same
+aggressiveness of the cancer. Older people have other health
+complications which requires complex treatment scheme and reduce the
+treatment effectiveness.
 
-The final reweighted logistic regression model identifies significant
-predictors of mortality risk (Alive vs Dead) for breast cancer patients.
-The table above summarizes the parameter estimates, highlighting the
-direction, magnitude, and significance of each predictor. The study
-confirms that Adjusted AJCC 6th stage (`x6th_stage`) and `grade` (Grade
-of the tumor) are the most critical factors in predicting mortality,
-which is consistent with clinical guidelines. Hormone receptor status
-also plays a vital role, as positive estrogen/progesterone receptors
-improve survival. Race also significantly impacts mortality risk. Black
-patients experience a higher risk of death compared to White patients.
-This disparity may stem from differences in access to healthcare, late
-diagnosis, or biological factors. The reweighted model successfully
-improves fairness across racial groups while maintaining overall
-predictive accuracy. Although the model performs slightly worse for
-minority groups, the gap has been reduced compared to the original
-model.
+## Limitations
 
-### Limitation
-
-The model assumes no significant interaction effects, which aligns with the data but could miss complex relationships. The disparity in model performance for "Other" racial groups suggests the need for further data collection or alternative modeling techniques.
+The model assumes no significant interaction effects, which align with
+the data but could miss complex relationships. The disparity in model
+performance for “Other” racial groups suggests the need for further data
+collection or alternative modeling techniques.
 
 ## Contribution
-Ada Guo wrote the abstract and introduction, compiled data cleaning and EDA results, and synthesized findings into cohesive sections for the report. 
-Khue Nguyen analyzed results, wrote the conclusion and limitations, refined the report structure, and ensured clarity and completeness by adding references.
-Yixin Zheng wrote the methods and appendix section and constructed the Rmd file(cleaning, correlation matrix, Cramér's V, assumption checks, feature selection, model, cross-validation, fairness reweight).
+
+Ada Guo wrote the abstract and introduction, compiled data cleaning and
+EDA results, and synthesized findings into cohesive sections for the
+report. Khue Nguyen analyzed results, wrote the conclusion and
+limitations, refined the report structure, and ensured clarity and
+completeness by adding references. Yixin Zheng wrote the methods and
+appendix section and constructed the Rmd file(cleaning, correlation
+matrix, Cramér's V, assumption checks, feature selection, model,
+cross-validation, fairness reweight).
 
 ## Reference
 
+1.  Cao SS, Lu CT. Recent perspectives of breast cancer prognosis and
+    predictive factors. Oncol Lett. 2016;12(5):3674-3678.
+    <doi:10.3892/ol.2016.5149>
+2.  Cancer of the Breast (Female) - Cancer Stat Facts. SEER. Accessed
+    December 19, 2024.
+    <https://seer.cancer.gov/statfacts/html/breast.html>
+3.  Bundred NJ. Prognostic and predictive factors in breast cancer.
+    Cancer Treat Rev. 2001;27(3):137-142. <doi:10.1053/ctrv.2000.0207>
+4.  Soerjomataram I, Louwman MWJ, Ribot JG, Roukema JA, Coebergh JWW. An
+    overview of prognostic factors for long-term survivors of breast
+    cancer. Breast Cancer Res Treat. 2008;107(3):309-330.
+    <doi:10.1007/s10549-007-9556-1>
+5.  Phung MT, Tin Tin S, Elwood JM. Prognostic models for breast cancer:
+    a systematic review. BMC Cancer. 2019;19(1):230.
+    <doi:10.1186/s12885-019-5442-6>
 
 \newpage
 
@@ -1074,6 +1124,9 @@ knitr::kable(summary_by_status, caption = "Summary Statistics Grouped by Surviva
 
 vif_table <- read.csv("tables/vif.csv")
 knitr::kable(vif_table, caption = "Variance Inflation Factors for Predictors")
+
+unstable_table <- read.csv("tables/unstable_coefficients.csv")
+knitr::kable(unstable_table, caption = "Unstable Coefficients")
 
 best_subset_summary <- read.csv("tables/best_subset_summary.csv")
 knitr::kable(best_subset_summary, caption = "Best Subset Selection Summary")
