@@ -56,32 +56,17 @@ in breast cancer care.
 
 ## Introduction
 
-Breast cancer has a high prevalence with average X new cases each year
-worldwide. Approximately 13.1 % of female are diagnosed with breast
-cancer at some point in their lifetime. This type of cancer accounts for
-23% of total cancer cases and 14% of cancer deaths$^1$. Recent years
-with the advances in understanding of disease diagnosis and the
-effective tailored treatments, the mortality rate has decreased$^2$.
-According to research, survival of breast cancer depends on various
-factors including the tumor size, the grade of tumor$^3$, cancer stage,
-lymph node stages, and socioeconomic and race$^4$ . In several published
-models with data from various regions, the most important predictors of
-survival rates are the prognostic factors of tumor sizes and grade of
-tumor and, age at diagnosis 5. Patients at younger age when they were
-diagnosed with breast cancer at the same stage are more likely to live
-longer compared to older patients. Some data also showed that racial and
-socioeconomic status can explain the survival rate variation among the
-groups with the same prognostic indicators. For example, lower-income
-patients often have late diagnosis and the African American population
-also has a lower survival rate. However, these models yielded different
-suboptimal results based on the available data source. This report
-examines data from a prospective cohort of breast cancer patients, which
-includes variables including demographic, clinical, and pathological
-factors. The primary aims are to predict mortality risk, identify
-significant predictors, and assess the fairness and performance of
-predictive models across racial groups. By achieving these objectives,
-this analysis seeks to offer meaningful insights into improving breast
-cancer outcomes and addressing healthcare disparities.
+Breast cancer is highly prevalent, with X new cases annually worldwide.
+About 13.1% of women are diagnosed during their lifetime, accounting for
+23% of cancer cases and 14% of cancer deaths$^1$. Advances in diagnosis
+and tailored treatments have reduced mortality rates$^2$. Survival
+depends on factors like tumor size, grade$^3$, stage, lymph node
+involvement, socioeconomic status, and race$^4$. Younger patients often
+have better outcomes, while disparities exist for lower-income and
+African American populations due to late diagnoses$^5$. This report
+analyzes a cohort of breast cancer patients to predict mortality,
+identify key predictors, and evaluate model fairness across racial
+groups, aiming to improve outcomes and address disparities.
 
 ## Methods
 
@@ -586,9 +571,9 @@ without these points were compared. Removing these points destabilized
 coefficients like grade, making them unreliable. Robust logistic
 regression (model_robust) mitigated outliers impact, providing stable
 estimates for predictors (table.5). About 12% of data had reduced
-influence, while most observations remained unaffected. Despite its
-advantages, we opted for the original logistic regression for simplicity
-and familiarity.
+influence, while most observations are unaffected. Despite its
+advantages, we chose the original logistic regression for simplicity and
+familiarity.
 
 **Model Construction and Selection** Models were constructed using
 predictors identified during EDA and assumption checks. Forward,
@@ -605,72 +590,27 @@ Fairness was assessed by evaluating model performance across racial
 subgroups (White, Black, Other) based on subgroup-specific ROC-AUC
 values. To address disparities, fairness reweighting was applied by
 adjusting model weights to prioritize underrepresented groups. The
-reweighted model's performance was compared with the original,
-highlighting improvements in fairness while maintaining predictive
-accuracy. Predictor coefficients were interpreted as odds ratios,
-quantifying their impact on survival outcomes
+reweighted model's performance was compared with the original. Predictor
+coefficients were interpreted as odds ratios, quantifying their impact
+on survival outcomes
 
 ## Results
 
-### Exploratory Data Analysis
+**EDA** Cramér’s V analysis identified `x6th_stage`, `n_stage`, and
+hormone receptor statuses as the strongest predictors of survival, while
+`marital status`, `race`, and `a_stage` showed weaker associations
+(fig.1). Bar plots highlight racial disparities, with higher mortality
+among Non-White, particularly Black patients, and combining groups
+simplifies comparisons (figs.2–3). Histograms revealed significant right
+skewness for most continuous variables (except `age`), improved by log
+transformations for the other continuous vars (figs.4–5). Boxplots
+confirm these patterns (figs.6–10). A correlation matrix showed weak
+overall relationships and no multicollinearity, except
+`regional_node_positive` is moderately associated with both `tumor size`
+(0.24) and `regional nodes examined` (0.41), guiding modeling choices
+(fig.11).
 
-The plot shows the strength of association (Cramér’s V) between
-**survival status** and each categorical predictor:
-
-1.  **x6th_stage** and **n_stage** have the **highest Cramér's V
-    values** (around 0.25), indicating they are the most informative
-    predictors of survival status in the dataset. These variables
-    reflect tumor stage and lymph node involvement, which are critical
-    factors in breast cancer prognosis.
-
-2.  **Estrogen_status**, **progesterone_status**, and **grade** exhibit
-    **moderate associations** (Cramér’s V around 0.15–0.2). These
-    variables provide meaningful information about hormone status and
-    differentiation, making them important contributors to survival
-    prediction.
-
-3.  **Differentiate** and **t_stage** show moderate but slightly lower
-    associations compared to the top variables, suggesting their
-    relevance to survival status.
-
-4.  **a_stage**, **marital_status**, and **race** have **lower Cramér’s
-    V values** (less than 0.1), indicating weaker associations with
-    survival status. Although these variables contribute limited
-    information individually, they may still be useful in interaction
-    terms or when combined with other predictors.
-
-By focusing on variables with higher Cramér’s V values, we can build
-more efficient and predictive models for survival status analysis.
-
-Both plots (Proportional Bar Plot for Survival Status by Race, or
-combined race group) confirm a disparity in survival outcomes across
-racial groups. Non-White patients, particularly Black patients, show a
-higher likelihood of death. Effect of Combining Groups: Combining Black
-and Other into Minority Non-White simplifies the comparison and reduce
-the racial disparities between Majority White and Minority Non-White
-groups.
-
-Histograms were created for each continuous variable to visually examine
-their distributions and identify potential skewness. The results
-revealed that, except for `age`, the other three variables exhibited
-significant right skewness, indicating the need for transformation if we
-want to perform linear regression. Though we are not doing linear
-regression, transformation has still been performed here, we see that
-after performing log-transformation, there is a improvement on the
-skewness of `tumor_size`, `regional_node_examined` and
-`reginol_node_positive`.
-
-Pairwise Relationships and Interactions: A correlation matrix was
-generated to examine the relationships between the variables. Small
-circles (near-zero correlations) are observed for age and all other
-variables; tumor_size and regional_node_examineds suggesting weak or no
-relationships. `regional_node_positive` is moderately associated with
-both `tumor size` (0.24) and `regional nodes examined` (0.41), which
-might influence modeling decisions. There are no strong correlations
-(close to +-1), suggesting no immediate multicollinearity issues among
-these variables.
-
-### Feature Selection
+**Model Selection and Intepretation**
 
 ```{r variable selection original 1, echo = FALSE}
 # Forward selection
@@ -688,25 +628,7 @@ writeLines(capture.output(summary(backward_model)), "results/backward_model_summ
 writeLines(capture.output(summary(stepwise_model)), "results/stepwise_model_summary.txt")
 ```
 
-full results are attached in the end Full Model: glm(formula = status \~
-. , family = binomial, data = model_data_3) AIC: 3039.8
-
-Forward Model glm(formula = status \~ race + marital_status +
-x6th_stage + grade + a_stage + estrogen_status + progesterone_status +
-tumor_size_log + rn_examined_log + age_log, family = binomial, data =
-model_data_3) AIC: 3039.8
-
-Backward Model: glm(formula = status \~ race + marital_status +
-x6th_stage + grade + estrogen_status + progesterone_status +
-rn_examined_log + age_log, family = binomial, data = model_data_3)
-AIC:3037.5
-
-Stepwise Model: glm(formula = status \~ race + marital_status +
-x6th_stage + grade + estrogen_status + progesterone_status +
-rn_examined_log + age_log, family = binomial, data = model_data_3)
-AIC:3037.5
-
-```{r best subset-original 1, echo = FALSE}
+```{r best subset-original 1, include = FALSE}
 best_subset <- regsubsets(`status` ~ ., data = model_data_3, nvmax = ncol(model_data_3) - 1)
 best_summary <- summary(best_subset)
 
@@ -719,15 +641,18 @@ subset_table <- data.frame(
 write.csv(subset_table, "tables/best_subset_summary.csv", row.names = FALSE)
 
 best_adjr2_model <- which.max(best_summary$adjr2)
-adjr2_predictor <- names(coef(best_subset, best_adjr2_model))[-1]
+adjr2_predictor <- paste(names(coef(best_subset, best_adjr2_model))[-1], collapse = ", ")
 best_cp_model <-  which.min(best_summary$cp)
-cp_predictor <- names(coef(best_subset, best_cp_model))[-1]
+cp_predictor <- paste(names(coef(best_subset, best_cp_model))[-1], collapse = ", ")
 best_bic_model <- which.min(best_summary$bic)
-bic_predictor <- names(coef(best_subset, best_bic_model))[-1]
+bic_predictor <- paste(names(coef(best_subset, best_bic_model))[-1], collapse = ", ")
 
-cat("Best Model by Adjusted R2: ", best_adjr2_model, "variables,", adjr2_predictor, "\n")
-cat("Best Model by Cp: ", best_cp_model, "variables,", cp_predictor, "\n")
-cat("Best Model by BIC: ", best_bic_model, "variables,", bic_predictor, "\n")
+best_models_table <- data.frame(
+  Criterion = c("Adjusted R2", "Cp", "BIC"),
+  Best_Num_Predictors = c(best_adjr2_model, best_cp_model, best_bic_model),
+  Predictors = c(adjr2_predictor, cp_predictor, bic_predictor)
+)
+write.csv(best_models_table, "tables/best_models_summary.csv", row.names = FALSE)
 ```
 
 ```{r best subset-original 2, include = FALSE}
@@ -752,7 +677,23 @@ par(mfrow = c(1, 1))
 dev.off()
 ```
 
-```{r interacting effects, echo = FALSE}
+Full results are attached at the end. Though AIC values differed
+slightly: Full Model 3039.8; Forward Model 3039.8; Backward Model
+3037.5; Stepwise Model 3037.5, all three selection methods (forward,
+stepwise, backward) yielded the same model, so we will use stepwise
+model as the final model considering it's low AIC value:\
+`status ~ race + marital_status + x6th_stage + grade + estrogen_status +`
+
+`progesterone_status + rn_examined_log + age_log`
+
+The best subset selection method does yield a different model and number
+of variables (table.9 and fig.14). However, since it treats each level
+of factor variables as independent binary variables (e.g.,
+`x6th_stageIIIA` as a dummy variable), we did not use this method for
+interpretability purposes, as factors should be considered as a whole in
+our project.
+
+```{r interacting effects, echo = FALSE, results='hide'}
 # Define predictors
 predictors <- c("race", "marital_status", "x6th_stage", "grade", 
                 "estrogen_status", "progesterone_status", "rn_examined_log", "age_log")
@@ -803,74 +744,38 @@ interaction_results <- interaction_results[order(interaction_results$P_Value), ]
 print(interaction_results)
 ```
 
-Since resulting dataframe is empty, it suggests that none of the
-interaction terms tested in our dataset have p-values less than 0.05.
-This outcome aligns with our earlier exploratory analyses (Cramér’s V,
-correlation matrix, and model diagnostics), which indicated that
-interaction effects are likely weak or non-existent in your data.
+**Interaction Effects** Pairwise interactions between predictors were
+tested, since resulting dataframe is empty, none of the interaction
+terms had p-values below 0.05, aligning with earlier analyses suggesting
+weak or non-existent interaction effects in our data.
 
-#### Final Model
+```{r coefficients, include=FALSE}
+stepwise_summary <- summary(stepwise_model)
+stepwise_coefficients <- as.data.frame(stepwise_summary$coefficients)
+colnames(stepwise_coefficients) <- c("Estimate", "Std_Error", "Z_Value", "P_Value")
+stepwise_coefficients <- tibble::rownames_to_column(stepwise_coefficients, "Predictor")
 
-Since Best subset selection evaluates all possible combinations of
-predictors (including all levels of factor variables) to find the model
-with the best fit according to criteria like adjusted R2, Cp and BIC,
-each level of a factor variable (e.g., x6th_stageIIIA) can be treated as
-an independent binary variable (dummy variable) in this process. Thus we
-will not use the best subset selection , as we need consider the factor
-as a whole for interpretability.
+write.csv(stepwise_coefficients, "tables/stepwise_coefficients.csv", row.names = FALSE)
+```
 
-The final model was chosen through forward, backward, and stepwise
-selection methods using AIC as the selection criterion. The model
-balances interpretability and predictive performance, including only
-significant predictors that contribute to understanding survival
-outcomes:
+**Key Findings on Coefficients** Key predictors of survival include
+`x6th_stage`, `grade`,
 
-`glm(formula = status ~ race + marital_status + x6th_stage + grade + estrogen_status + progesterone_status + rn_examined_log + age_log, family = binomial, data = model_data_3)`
-
-In logistic regression, coefficients represent the change in the
-log-odds of the outcome (`status` = Dead) for a one-unit increase in a
-predictor, holding other variables constant. Odds ratios provide a more
-interpretable measure.
-
-The key coefficients included are 1. Race: - raceBlack: Positive
-coefficient implies higher odds of death for Black patients compared to
-the reference group (White patients). Odds ratio \> 1 indicates
-increased risk for Black patients. - raceOther: Negative coefficient
-indicates slightly reduced odds of death for patients classified as
-"Other" compared to White patients.
-
-2.  Marital Status: The marital status categories have weak effects
-    (some not statistically significant). For instance, being married or
-    widowed appears to have no strong association with survival compared
-    to the reference group.
-
-3.  Adjusted AJCC 6th stage (`x6th_stage`): is the strongest predictor
-    of death risk. Higher stages (IIIA, IIIB, IIIC) significantly
-    increase the odds of death compared to stage IIA (reference group).
-    Patients in stage IIIC have the highest odds of death, indicating
-    advanced tumor progression is a critical predictor of survival.
-
-4.  Tumor Grade (`grade`): Grades 3 and 4 significantly increase the
-    odds of death compared to Grade 1, indicating poorly differentiated
-    tumors are associated with worse outcomes.
-
-5.  Hormone Receptor Status: `estrogen_statusPositive` and
-    `progesterone_statusPositive`: Negative coefficients suggest reduced
-    odds of death for patients with positive estrogen or progesterone
-    receptor status. This reflects the improved prognosis often
-    associated with hormone-sensitive tumors.
-
-6.  Log-transformed Predictors: -`rn_examined_log`: Negative coefficient
-    indicates increased survival odds with more regional lymph nodes
-    examined. This might reflect more aggressive or effective treatment
-    strategies. -`age_log`: Positive coefficient implies older patients
-    are at higher risk of death.
-
-So `x6th_stage`, `grade`, `estrogen_statusPositive` and
-`progesterone_statusPositive`, `age_log` and `rn_examined_log` are
-significant predictors affecting the risk.
-
-### Model Performance
+`estrogen_statusPositive`, `progesterone_statusPositive`,
+`rn_examined_log`, and `age_log` (table.10). The final model identified
+key predictors of mortality. Race was significant, with `raceBlack`
+(0.47961) showing higher odds of death for Black patients and
+`raceOther` (-0.42884) slightly reducing odds compared to White
+patients. Marital status had weak effects (p-values \> 0.05), showing no
+strong survival associations. The `x6th_stage` was the strongest
+predictor, with higher stages (e.g., IIIA, IIIB, IIIC) significantly
+increasing odds of death compared to stage IIA, particularly stage IIIC
+. Poorly differentiated tumors (Grade 3: 0.91053; Grade 4: 1.87333)
+increased mortality risk, while positive hormone receptor status reduced
+odds of death, reflecting better outcomes for hormone-sensitive tumors.
+Log-transformed predictors showed `rn_examined_log` (-0.29822) increased
+survival odds with more lymph nodes examined, while `age_log` (1.09581)
+indicated higher mortality risk for older patients.
 
 ```{r performance, echo = FALSE}
 set.seed(123)
@@ -890,13 +795,13 @@ performance_summary <- capture.output(cv_model)
 writeLines(performance_summary, "results/cv_model_performance.txt")
 ```
 
-full results are attached in the end We did Cross-Validation (10 fold)
-ROC-AUC: 0.7400, the overall performance of the model is moderately
-good, with an acceptable ability to distinguish between "Alive" and
-"Dead" outcomes. Sensitivity: 0.985, the model is highly sensitive,
-meaning it correctly identifies most of the "Dead" cases. Specificity:
-0.122, the model has very low specificity, indicating difficulty in
-correctly identifying "Alive" cases.
+**Model Performance** Full results are attached at the end.
+Cross-validation (10-fold) revealed an overall ROC-AUC of 0.7400,
+indicating moderately good performance with an acceptable ability to
+distinguish between "Alive" and "Dead" outcomes. The model demonstrated
+high sensitivity (0.985), correctly identifying most "Dead" cases, but
+low specificity (0.122), reflecting difficulty in identifying "Alive"
+cases.
 
 ```{r fairness, echo = FALSE, message = FALSE, warning = FALSE}
 # Split data by race group
@@ -924,34 +829,17 @@ auc_black <- auc(roc_black)
 pred_other <- predict(cv_model, newdata = other_data, type = "prob")[, "Dead"]
 roc_other <- roc(other_data$status, pred_other)
 auc_other <- auc(roc_other)
-
-# Print AUC results
-cat("ROC-AUC for White group:", auc_white, "\n")
-cat("ROC-AUC for Black group:", auc_black, "\n")
-cat("ROC-AUC for Other group:", auc_other, "\n")
-cat("ROC-AUC for Minority group:", auc_minority, "\n")
 ```
 
-Performance by Race Groups White Group (Majority): - ROC-AUC: 0.7504 -
-The model performs better for the majority race group, achieving the
-highest predictive ability among the subgroups.
+(Table 8) Performance by race groups revealed disparities, the White
+group had the highest ROC-AUC (0.7504), while the Black group (0.7021)
+and Other group (0.6584) showed lower performance. The combined minority
+group (ROC-AUC: 0.7313) improved but remained below the White group,
+highlighting a fairness gap. Reweighting narrowed this gap, increasing
+the minority group's ROC-AUC to 0.7358, closer to the White group's
+0.7486, improving fairness while maintaining accuracy.
 
-Black Group (Minority): - ROC-AUC: 0.7021 - The performance for Black
-patients is lower than for White patients, indicating potential
-disparities in prediction accuracy.
-
-Other Group (Minority): - ROC-AUC: 0.6584 - The lowest ROC-AUC is for
-the "Other" race group, suggesting the model struggles most with this
-subgroup.
-
-Combined Minority Group (Black + Other): - ROC-AUC: 0.7313 - When
-grouped together, the model's performance for minorities improves but
-remains slightly lower than for the White group.
-
-This disparity indicate a potential fairness issue, which need us to
-reduce the performance gap.
-
-```{r reweight subgroup, echo = FALSE, warning = FALSE, message = FALSE}
+```{r reweight subgroup, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 model_data_4 <- model_data_3 %>%
   mutate(weight = case_when(
     race == "White" ~ 1,
@@ -989,19 +877,18 @@ pred_other_weighted <- predict(reweighted_model, newdata = other_data, type = "p
 roc_other_weighted <- roc(other_data$status, pred_other_weighted)
 auc_other_weighted <- auc(roc_other_weighted)
 
-# Print updated results
-cat("Reweighted Model - ROC-AUC for White group:", auc_white_weighted, "\n")
-cat("Reweighted Model - ROC-AUC for Minority group:", auc_minority_weighted, "\n")
-cat("Reweighted Model - ROC-AUC for Black group:", auc_black_weighted, "\n")
-cat("Reweighted Model - ROC-AUC for Other group:", auc_other_weighted, "\n")
+auc_comparison_summary <- data.frame(
+  Model = factor(c("Original", "Reweighted"), levels = c("Original", "Reweighted")),
+  White = c(auc_white, auc_white_weighted),
+  Black = c(auc_black, auc_black_weighted),
+  Other = c(auc_other, auc_other_weighted),
+  Minority = c(auc_minority, auc_minority_weighted)
+)
 
+auc_comparison_summary[, 2:5] <- round(auc_comparison_summary[, 2:5], 4)
 
+write.csv(auc_comparison_summary, "tables/auc_comparison_summary.csv", row.names = FALSE)
 ```
-
-The reweighted model shows improved fairness compared to the original
-combined model: Reweighting has reduced the performance gap between the
-White and minority groups. The ROC-AUC for the minority group (0.7358)
-is now closer to that of the majority group (0.7486).
 
 ## Conclusion
 
@@ -1032,43 +919,23 @@ rownames(results_table) <- NULL
 write.csv(results_table, "tables/reweighted_model_results.csv", row.names = FALSE)
 ```
 
-In this report, we derived a model to predict the survival rate of
-breast cancer patients using a logistic model. The most important
-factors are Adjusted AJCC 6th stage (x6th_stage) and grade (Grade of the
-tumor) which agree with the published model in literature. The final
-model was selected through forward, backward, and stepwise selection
-methods using AIC as the selection criterion. The model includes several
-significant predictors including adjusted 6th stage, tumor grade,
-regional lymph nodes status and hormone receptor status. Racial
-disparity is commonly observed among all the disease. In this model, the
-black patient has higher odds of death compared to white patients while
-relatively lower odds of death was calculated for the “Other” race
-category compared to white patients. This disparity may stem from
-differences in access to healthcare, late diagnosis, or biological
-factors. The reweighted model improves fairness across racial groups
-while maintaining overall predictive accuracy. Although the model
-performs slightly worse for minority groups, the gap has been reduced
-compared to the original model. The stages of cancer is the strongest
-predictor of mortality risk (p values ). Higher stages (IIIA,IIIB, IIIC)
-significantly increase the odds of death compared to stage IIA
-(reference group). Patients in stage IIIC have the highest odds of
-death, indicating advanced tumor progression is a critical predictor of
-survival. Tumor grade is another important factor that affect the health
-outcomes. In our model, patients with grade 3 and 4 have significant
-elevated odds of death compared to grade 1 (xxx, number to indicate).
-This result is consistent with literature where many models also
-identified the tumor grade as one of the most significant predictors.
-Our model also indicated the reduced odds of death for patients with
-positive estrogen or progesterone receptor status (number xxx). This
-reflects the improved prognosis often associated with hormone-sensitive
-tumors. Higher survival odds are associated with more regional lymph
-nodes examined. This could reflect the effectiveness of tailored
-treatments to remove the lymph nodes so that the risk of death is
-reduced significantly. The model also showed that the younger the
-patient age at diagnosis is, the higher survival odd given the same
-aggressiveness of the cancer. Older people have other health
-complications which requires complex treatment scheme and reduce the
-treatment effectiveness.
+This study developed a logistic regression model to predict breast
+cancer survival, identifying key predictors and addressing racial
+disparities. Tumor stage and grade were the strongest predictors, with
+higher stages (e.g., IIIA, IIIB, IIIC) and poorly differentiated tumors
+(Grades 3 and 4) significantly increasing mortality risk. Positive
+hormone receptor status reduced odds of death, reflecting better
+outcomes for hormone-sensitive tumors. Increased lymph node evaluation
+improved survival odds, while older age indicated higher mortality risk.
+Racial disparities were evident, with Black patients facing higher odds
+of death (OR = 1.5) compared to White patients, while the "Other" race
+group had lower odds (OR = 0.6). Reweighting improves fairness and
+validity for underrepresented groups, increasing the minority group’s
+ROC-AUC from 0.7313 to 0.7358, narrowing the gap with the White group
+(0.7486), but may reduce generalizability to majority-dominant
+populations. It alters predictor importance, requiring careful
+interpretation, and may overfit to minority-specific patterns, affecting
+consistency across diverse datasets.
 
 ## Limitations
 
@@ -1079,14 +946,13 @@ collection or alternative modeling techniques.
 
 ## Contribution
 
-Ada Guo wrote the abstract and introduction, compiled data cleaning and
-EDA results, and synthesized findings into cohesive sections for the
-report. Khue Nguyen analyzed results, wrote the conclusion and
-limitations, refined the report structure, and ensured clarity and
-completeness by adding references. Yixin Zheng wrote the methods and
-appendix section and constructed the Rmd file(cleaning, correlation
-matrix, Cramér's V, assumption checks, feature selection, model,
-cross-validation, fairness reweight).
+Ada Guo wrote the abstract, introduction, and results-eda. Khue Nguyen
+analyzed results, wrote the conclusion and limitations, refined the
+results-section structure, and ensured clarity and completeness by
+adding references. Yixin Zheng wrote the methods and appendix section
+and constructed the Rmd file(cleaning, correlation matrix, Cramér's V,
+assumption checks, feature selection, model, cross-validation, fairness
+reweight).
 
 ## Reference
 
@@ -1133,6 +999,15 @@ knitr::kable(best_subset_summary, caption = "Best Subset Selection Summary")
 
 reweighted_model_results <- read.csv("tables/reweighted_model_results.csv")
 knitr::kable(reweighted_model_results, caption = "Reweighted Logistic Regression Model Results")
+
+auc_table <- read.csv("tables/auc_comparison_summary.csv")
+knitr::kable(auc_table, caption = "Comparison of ROC-AUC Values Across Models and Racial Groups", col.names = c("Model Type", "White", "Black", "Other", "Minority"))
+
+best_models_table <- read.csv("tables/best_models_summary.csv")
+knitr::kable(best_models_table, caption = "Best Models by Selection Criteria", col.names = c("Criterion", "Number of Predictors", "Predictors"))
+
+stepwise_coefficients <- read.csv("tables/stepwise_coefficients.csv")
+knitr::kable(stepwise_coefficients, caption = "Stepwise Model Coefficients", col.names = c("Predictor", "Estimate", "Std. Error", "Z-Value", "P-Value"))
 ```
 
 \newpage
