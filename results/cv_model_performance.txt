@@ -1,0 +1,14 @@
+Generalized Linear Model 
+
+4024 samples
+   8 predictor
+   2 classes: 'Alive', 'Dead' 
+
+No pre-processing
+Resampling: Cross-Validated (10 fold) 
+Summary of sample sizes: 3622, 3621, 3621, 3621, 3621, 3623, ... 
+Resampling results:
+
+  ROC        Sens       Spec     
+  0.7400002  0.9850311  0.1218403
+

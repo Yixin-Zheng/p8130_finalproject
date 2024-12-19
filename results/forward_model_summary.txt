@@ -1,0 +1,39 @@
+
+Call:
+glm(formula = status ~ race + marital_status + x6th_stage + grade + 
+    a_stage + estrogen_status + progesterone_status + tumor_size_log + 
+    rn_examined_log + age_log, family = binomial, data = model_data_3)
+
+Coefficients:
+                            Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                 -5.89244    1.30699  -4.508 6.53e-06 ***
+raceBlack                    0.48857    0.16068   3.041 0.002361 ** 
+raceOther                   -0.42724    0.20104  -2.125 0.033573 *  
+marital_statusMarried       -0.22122    0.14008  -1.579 0.114283    
+marital_statusSeparated      0.68972    0.38114   1.810 0.070355 .  
+marital_statusSingle        -0.03701    0.17287  -0.214 0.830499    
+marital_statusWidowed        0.03200    0.21828   0.147 0.883459    
+x6th_stageIIB                0.43732    0.15999   2.733 0.006267 ** 
+x6th_stageIIIA               0.87662    0.16766   5.229 1.71e-07 ***
+x6th_stageIIIB               1.40443    0.33436   4.200 2.66e-05 ***
+x6th_stageIIIC               1.91444    0.18715  10.229  < 2e-16 ***
+grade2                       0.53100    0.18314   2.899 0.003739 ** 
+grade3                       0.90600    0.19171   4.726 2.29e-06 ***
+grade4                       1.85041    0.54216   3.413 0.000642 ***
+a_stageRegional             -0.10496    0.25449  -0.412 0.680023    
+estrogen_statusPositive     -0.72590    0.17578  -4.130 3.63e-05 ***
+progesterone_statusPositive -0.56562    0.12677  -4.462 8.13e-06 ***
+tumor_size_log               0.11412    0.09327   1.224 0.221128    
+rn_examined_log             -0.29256    0.08015  -3.650 0.000262 ***
+age_log                      1.13021    0.29507   3.830 0.000128 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 3444.7  on 4023  degrees of freedom
+Residual deviance: 2999.8  on 4004  degrees of freedom
+AIC: 3039.8
+
+Number of Fisher Scoring iterations: 5
+

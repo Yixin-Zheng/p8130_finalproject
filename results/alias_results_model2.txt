@@ -1,0 +1,4 @@
+Model :
+status ~ age + race + marital_status + x6th_stage + grade + a_stage + 
+    tumor_size + estrogen_status + progesterone_status + regional_node_examined
+
