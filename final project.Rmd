@@ -798,32 +798,21 @@ This study developed a logistic regression model to predict breast cancer surviv
 Reweighting improved fairness for underrepresented groups, increasing the minority group’s ROC-AUC from 0.7313 to 0.7358 and narrowing the gap with the White group (0.7486). However, it may reduce generalizability to majority-dominant populations and alter predictor importance, requiring careful interpretation. Stepwise selection treated factor levels as independent variables (e.g., `x6th_stageIIIA` as a dummy), potentially excluding some levels and raising interpretability concerns. Marital status was retained in the final model despite weak significance due to its potential theoretical relevance, confounding effects, or fairness considerations. All three aspects—reweighting, factor level treatment, and marital status inclusion—require further research to ensure robustness and interpretability.
 
 ## Contribution
-
-Ada Guo wrote the abstract, introduction, and results-eda. Khue Nguyen
-analyzed results, wrote the conclusion and limitations, refined the
-results-section structure, and ensured clarity and completeness by
-adding references. Yixin Zheng wrote the methods and appendix section
+All members participated in group discussions, and editing reports.
+Ada Guo drafted the abstract, introduction, and results-eda. 
+Khue Nguyen analyzed and draft results, conclusion and limitations, refined results structure, add references. 
+Yixin Zheng wrote the methods, revise the results, conclusion, limitation,
 and constructed the Rmd file(cleaning, correlation matrix, Cramér's V,
 assumption checks, feature selection, model, cross-validation, fairness
-reweight).
+reweight, appendix).
 
 ## Reference
-
-1.  Cao SS, Lu CT. Recent perspectives of breast cancer prognosis and
-    predictive factors. Oncol Lett. 2016;12(5):3674-3678.
-    <doi:10.3892/ol.2016.5149>
-2.  Cancer of the Breast (Female) - Cancer Stat Facts. SEER. Accessed
-    December 19, 2024.
-    <https://seer.cancer.gov/statfacts/html/breast.html>
-3.  Bundred NJ. Prognostic and predictive factors in breast cancer.
-    Cancer Treat Rev. 2001;27(3):137-142. <doi:10.1053/ctrv.2000.0207>
-4.  Soerjomataram I, Louwman MWJ, Ribot JG, Roukema JA, Coebergh JWW. An
-    overview of prognostic factors for long-term survivors of breast
-    cancer. Breast Cancer Res Treat. 2008;107(3):309-330.
-    <doi:10.1007/s10549-007-9556-1>
-5.  Phung MT, Tin Tin S, Elwood JM. Prognostic models for breast cancer:
-    a systematic review. BMC Cancer. 2019;19(1):230.
-    <doi:10.1186/s12885-019-5442-6>
+1.	Arnold M, Morgan E, Rumgay H, et al. Current and future burden of breast cancer: Global statistics for 2020 and 2040. Breast Off J Eur Soc Mastology. 2022;66:15-23. doi:10.1016/j.breast.2022.08.010
+2.	Cao SS, Lu CT. Recent perspectives of breast cancer prognosis and predictive factors. Oncol Lett. 2016;12(5):3674-3678. doi:10.3892/ol.2016.5149
+3.	Cancer of the Breast (Female) - Cancer Stat Facts. SEER. Accessed December 19, 2024. https://seer.cancer.gov/statfacts/html/breast.html
+4.	Bundred NJ. Prognostic and predictive factors in breast cancer. Cancer Treat Rev. 2001;27(3):137-142. doi:10.1053/ctrv.2000.0207
+5.	Soerjomataram I, Louwman MWJ, Ribot JG, Roukema JA, Coebergh JWW. An overview of prognostic factors for long-term survivors of breast cancer. Breast Cancer Res Treat. 2008;107(3):309-330. doi:10.1007/s10549-007-9556-1
+6.	Phung MT, Tin Tin S, Elwood JM. Prognostic models for breast cancer: a systematic review. BMC Cancer. 2019;19(1):230. doi:10.1186/s12885-019-5442-6
 
 \newpage
 
@@ -899,8 +888,7 @@ Variables](plots/correlation_matrix_plot.png)
 ### Code Results
 
 For full code results, please refer to the `.txt` files available in the
-`results` folder of the GitHub repository:
-[Yixin-Zheng/p8130_finalproject](https://github.com/Yixin-Zheng/p8130_finalproject).
+`results` folder of the GitHub repository: https://github.com/Yixin-Zheng/p8130_finalproject.
 
 ## Code Appendix
 
