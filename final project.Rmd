@@ -595,7 +595,6 @@ writeLines(capture.output(summary(forward_model)), "results/forward_model_summar
 writeLines(capture.output(summary(backward_model)), "results/backward_model_summary.txt")
 writeLines(capture.output(summary(stepwise_model)), "results/stepwise_model_summary.txt")
 ```
-
 AIC values differed slightly (Full: 3039.8; Forward: 3039.8; Backward: 3037.5; Stepwise: 3037.5), but all methods yielded the same model. The stepwise model was chosen for its lower AIC (full results attached):
 $$Logit(P) = \beta_0 + \beta_1 \times raceBlack + \beta_2 \times raceOther + \ldots + \beta_i \times X_i $$
 Where $\beta_i$ values are taken from Table 10, $X_i$ represents other significant predictors, and $Logit(P) = log(\frac{P}{1-P})$, P is the probability of the `status` being 1.
@@ -684,10 +683,7 @@ writeLines(performance_summary, "results/cv_model_performance.txt")
 
 **Model Performance**  Cross-validation (10-fold) revealed an overall ROC-AUC of 0.7400, indicating moderately good performance with an acceptable ability to
 distinguish between "Alive" and "Dead" outcomes. The model demonstrated
-high sensitivity (0.985), correctly identifying most "Dead" cases, but
-low specificity (0.122), reflecting difficulty in identifying "Alive"
-cases (full results attached).
-
+high sensitivity (0.985), meaning it correctly identifies most of the "Dead" cases, but low specificity (0.122), indicating difficulty in correctly identifying "Alive" cases (full results attached).
 ```{r fairness, echo = FALSE, message = FALSE, warning = FALSE}
 # Split data by race group
 white_data <- model_data_3 %>% filter(race == "White")
@@ -793,14 +789,8 @@ rownames(results_table) <- NULL
 
 write.csv(results_table, "tables/reweighted_model_results.csv", row.names = FALSE)
 ```
-
-Performance by race groups revealed disparities, the White
-group had the highest ROC-AUC (0.7504), while the Black group (0.7021)
-and Other group (0.6584) showed lower performance. The combined minority
-group (ROC-AUC: 0.7313) improved but remained below the White group,
-highlighting a fairness gap. Reweighting narrowed this gap, increasing
-the minority group's ROC-AUC to 0.7358, closer to the White group's
-0.7486, improving fairness while maintaining accuracy (table.8). coefficients for reweighted model are in table.7
+The model performance varies across different racial groups.It demonstrates high ROC-AUC for the White group (0.7504), while the lower scores were evaluated for the Black group (0.7021) and Other group (0.6584).When Black and Other groups are combined as a single minority group, the model ROC-AUC improves to 0.7313, though it remains lower than the majority White group.
+Reweighting narrowed this gap, increasing the model’s ROC-AUC for the minority group to 0.7358, closer to the White group (0.7486), improving fairness while maintaining accuracy (table.8). The model equation must be adjusted accordingly if the reweighted model is chosen: $Logit(P) = \beta_0 + \beta_1 \times raceBlack + \ldots + \beta_i \times X_i $ where $\beta_i$ values are from Table 7, and $X_i$ represents the same significant predictors as in the original stepwise model.
 
 ## Conclusion and Limitation
 This study developed a logistic regression model to predict breast cancer survival, highlighting key predictors and addressing racial disparities. Tumor stage and grade were the strongest predictors, with higher stages (e.g., IIIA, IIIB, IIIC) and poorly differentiated tumors (Grades 3 and 4) significantly increasing mortality risk. Positive hormone receptor status improved survival odds, while older age and inadequate lymph node evaluation increased mortality risk. Racial disparities were evident: Black patients faced higher odds of death (OR = 1.5) compared to White patients, while the "Other" race group had lower odds (OR = 0.6). 
