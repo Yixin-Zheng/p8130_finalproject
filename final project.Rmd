@@ -143,32 +143,28 @@ write.csv(summary_by_status, "tables/summary_by_status.csv", row.names = FALSE)
 ```
 
 ```{r categorical varibales, echo = FALSE, warning =FALSE}
-# Define categorical variables to analyze
 variables <- c("race", "marital_status", "t_stage", "n_stage", "x6th_stage", 
                "differentiate", "grade", "a_stage", "estrogen_status", "progesterone_status")
 
-# Initialize a vector to store Cramér's V results
+# Initialize a vector
 results <- numeric(length(variables))
 
-# Calculate Cramér's V for each variable
 for (i in seq_along(variables)) {
   var <- variables[i]
   
-  # Select outcome and predictor variable, omitting missing values
+  # Select outcome and predictor variable, omit N/A
   df_temp <- model_data %>%
     dplyr::select(status, all_of(var)) %>%
     na.omit()
-   
-  # Convert both columns to factors
+  
   x <- droplevels(as.factor(df_temp$status))
   y <- droplevels(as.factor(df_temp[[var]]))
   
-  # Create contingency table and calculate Cramér's V
+  # calculate Cramér's V
   table_var <- table(x, y)
   results[i] <- cramersV(table_var)
 }
 
-# Create a dataframe with results
 association_df <- data.frame(Variable = variables, CramersV = results)
 
 # Plot Cramér's V values
@@ -395,9 +391,7 @@ model_data_1 <- model_data %>%
 
 alias_results <- capture.output(alias(glm(status ~ ., data = model_data_1, family = binomial)))
 
-# Save the results to a text file in the `results` folder
 writeLines(alias_results, "results/alias_results_model1.txt")
-
 ```
 
 VIF were calculated, to ensure that all values were below 5 (table.4),
@@ -407,7 +401,7 @@ indicating no multicollinearity. (dataset updated with dropped variable)
 model_data_2 <- model_data_1 %>%
   dplyr::select(-differentiate, -n_stage, -t_stage, -reginol_node_positive)
 
-# Perform multicollinearity check with alias()
+# Multicollinearity check with alias()
 alias_results_2 <- capture.output(alias(glm(status ~ ., data = model_data_2, family = binomial)))
 writeLines(alias_results_2, "results/alias_results_model2.txt")
 
@@ -487,16 +481,16 @@ the independence assumption was satisfied.
 full_model <- glm(status ~ ., 
                  data = model_data_3, family = binomial)
 
-# Calculate Cook's Distance
+# Cook's Distance
 cooksD <- cooks.distance(model_vif)
 
-# Plot Cook's Distance
+# Plot
 png("plots/cooks_distance_plot.png", width = 800, height = 600)
 plot(cooksD, pch = 20)
 abline(h = 4 / nrow(model_data_3), col = "red")
 dev.off()
 
-# Identify influential observations
+# Identify
 influential_obs <- which(cooksD > 4 / nrow(model_data_3))
 
 # Build Model
@@ -558,9 +552,7 @@ the final model. Interaction effects were tested by examining pairwise interacti
 cross-validation, evaluating ROC-AUC, sensitivity, and specificity.
 Fairness was assessed by evaluating model performance across racial
 subgroups (White, Black, Other) based on subgroup-specific ROC-AUC
-values. To address disparities, fairness reweighting was applied by
-adjusting model weights to prioritize underrepresented groups. 
-The reweighted model's performance was compared with the original final model. Predictor coefficients were interpreted as odds ratios, quantifying their impact on survival outcomes.
+values. To address disparities, inverse probability weighting (IPW) was applied: the proportions were computed as the size of each group divided by the total sample size (White: 3413, Other: 320, Black: 291) (table.1). The weights `W` were then derived as follows: $W = \frac{1}{\text{Proportion}}$.The calculated weights were 1.18 for White, 13.89 for Black, and 12.50 for Other. To keep weights manageable, we normalized them such that the maximum weight was scaled to 2, resulting in final weights of 0.17 for White, 2.00 for Black, and 1.80 for Other. The reweighted model's performance was then compared to the original, using subgroup-specific and overall AUC values to assess predictive fairness. Predictor coefficients were interpreted as odds ratios to quantify their impact on survival outcomes.
 
 
 ## Results
@@ -580,7 +572,7 @@ overall relationships and no multicollinearity, except
 
 **Model Selection and Intepretation**
 
-```{r variable selection original 1, echo = FALSE}
+```{r variable selection original, echo = FALSE}
 # Forward selection
 forward_model <- step(glm(status ~ ., data = model_data_3, family = binomial), scope = list(lower = ~1, upper = full_model), direction = "forward", trace = 0)
 
@@ -604,7 +596,6 @@ Where $\beta_i$ values are taken from Table 10, $X_i$ represents other significa
 predictors <- c("race", "marital_status", "x6th_stage", "grade", 
                 "estrogen_status", "progesterone_status", "rn_examined_log", "age_log")
 
-# Create a dataframe to store results
 interaction_results <- data.frame(
   Predictor1 = character(),
   Predictor2 = character(),
@@ -612,7 +603,7 @@ interaction_results <- data.frame(
   stringsAsFactors = FALSE
 )
 
-# Loop through each pair of predictors
+# Loop through pair of predictors
 for (i in seq_along(predictors)) {
   for (j in seq_along(predictors)) {
     if (i < j) {
@@ -632,7 +623,7 @@ for (i in seq_along(predictors)) {
         # Extract p-value for the interaction term
         p_value <- coef(summary(interaction_model))[interaction_term, "Pr(>|z|)"]
         
-        # Append to results if p-value < 0.05
+        # if p-value < 0.05
         if (p_value < 0.05) {
           interaction_results <- rbind(interaction_results, 
                                        data.frame(Predictor1 = predictor1, 
@@ -645,7 +636,7 @@ for (i in seq_along(predictors)) {
   }
 }
 
-# Sort results by p-value
+# Sort by p-value
 interaction_results <- interaction_results[order(interaction_results$P_Value), ]
 print(interaction_results)
 ```
@@ -655,13 +646,28 @@ print(interaction_results)
 ```{r coefficients, include=FALSE}
 stepwise_summary <- summary(stepwise_model)
 stepwise_coefficients <- as.data.frame(stepwise_summary$coefficients)
-colnames(stepwise_coefficients) <- c("Estimate", "Std_Error", "Z_Value", "P_Value")
-stepwise_coefficients <- tibble::rownames_to_column(stepwise_coefficients, "Predictor")
 
-write.csv(stepwise_coefficients, "tables/stepwise_coefficients.csv", row.names = FALSE)
+# Calculate Odds Ratios and Confidence Intervals
+odds_ratios <- exp(stepwise_coefficients[, "Estimate"])
+lower_ci <- exp(stepwise_coefficients[, "Estimate"] - 1.96 * stepwise_coefficients[, "Std. Error"])
+upper_ci <- exp(stepwise_coefficients[, "Estimate"] + 1.96 * stepwise_coefficients[, "Std. Error"])
+
+stepwise_result_table <- data.frame(
+  Predictor = rownames(stepwise_coefficients),
+  Estimate = round(stepwise_coefficients[, "Estimate"], 3),
+  Std_Error = round(stepwise_coefficients[, "Std. Error"], 3),
+  Odds_Ratio = round(odds_ratios, 3),
+  `95% CI (Lower)` = round(lower_ci, 3),
+  `95% CI (Upper)` = round(upper_ci, 3),
+  `P-Value` = format.pval(stepwise_coefficients[, "Pr(>|z|)"], digits = 3)
+)
+rownames(stepwise_result_table) <- NULL
+
+write.csv(stepwise_result_table, "tables/stepwise_model_results.csv", row.names = FALSE)
 ```
 
-**Key Findings on Coefficients** Table 6 highlights the coefficients for key predictors. Race was significant, with `raceBlack` (0.47961) associated with higher odds of death and `raceOther` (-0.42884) linked to lower odds compared to White patients. `x6th_stage` was the strongest predictor, with higher stages (e.g., IIIC) significantly increasing mortality risk. Poorly differentiated tumors (`Grades 3`: 0.91053, `Grade 4`: 1.87333) also raised mortality odds, while positive hormone receptor status reduced the likelihood of death. Log-transformed predictors showed `rn_examined_log` (-0.29822) improved survival odds, while `age_log` (1.09581) indicated higher mortality risk for older patients. Marital status had no strong associations.
+
+**Key Findings on Coefficients of Final Model-Original** Table 6 highlights the coefficients for key predictors. Race was significant, with `raceBlack` (0.47961) associated with higher odds of death and `raceOther` (-0.42884) linked to lower odds compared to White patients. `x6th_stage` was the strongest predictor, with higher stages (e.g., IIIC) significantly increasing mortality risk. Poorly differentiated tumors (`Grades 3`: 0.91053, `Grade 4`: 1.87333) also raised mortality odds, while positive hormone receptor status reduced the likelihood of death. Log-transformed predictors showed `rn_examined_log` (-0.29822) improved survival odds, while `age_log` (1.09581) indicated higher mortality risk for older patients. Marital status had no strong associations.
 
 ```{r performance, echo = FALSE}
 set.seed(123)
@@ -685,39 +691,40 @@ writeLines(performance_summary, "results/cv_model_performance.txt")
 distinguish between "Alive" and "Dead" outcomes. The model demonstrated
 high sensitivity (0.985), meaning it correctly identifies most of the "Dead" cases, but low specificity (0.122), indicating difficulty in correctly identifying "Alive" cases (full results attached).
 ```{r fairness, echo = FALSE, message = FALSE, warning = FALSE}
-# Split data by race group
+# Split by race group
 white_data <- model_data_3 %>% filter(race == "White")
 minority_data <- model_data_3 %>% filter(race != "White")
 black_data <- model_data_3 %>% filter(race == "Black")
 other_data <- model_data_3 %>% filter(race == "Other")
 
-# Predict probabilities for White group
+# Predict for White group
 pred_white <- predict(cv_model, newdata = white_data, type = "prob")[, "Dead"]
 roc_white <- roc(white_data$status, pred_white)
 auc_white <- auc(roc_white)
 
-# Predict probabilities for Minority group
+# Predict for Minority group
 pred_minority <- predict(cv_model, newdata = minority_data, type = "prob")[, "Dead"]
 roc_minority <- roc(minority_data$status, pred_minority)
 auc_minority <- auc(roc_minority)
 
-# Predict probabilities for Black group
+# Predict for Black group
 pred_black <- predict(cv_model, newdata = black_data, type = "prob")[, "Dead"]
 roc_black <- roc(black_data$status, pred_black)
 auc_black <- auc(roc_black)
 
-# Predict probabilities for Other group
+# Predict for Other group
 pred_other <- predict(cv_model, newdata = other_data, type = "prob")[, "Dead"]
 roc_other <- roc(other_data$status, pred_other)
 auc_other <- auc(roc_other)
 ```
 
 ```{r reweight subgroup, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
+# Assign weights based on normalized inverse probabilities
 model_data_4 <- model_data_3 %>%
   mutate(weight = case_when(
-    race == "White" ~ 1,
-    race == "Black" ~ 1.5,
-    race == "Other" ~ 2
+    race == "White" ~ 0.17,
+    race == "Black" ~ 2.00,
+    race == "Other" ~ 1.80
   ))
 
 minority_data <- model_data_4 %>% filter(race != "White")
@@ -759,21 +766,20 @@ auc_comparison_summary <- data.frame(
 )
 
 auc_comparison_summary[, 2:5] <- round(auc_comparison_summary[, 2:5], 4)
-
 write.csv(auc_comparison_summary, "tables/auc_comparison_summary.csv", row.names = FALSE)
 ```
 
 ```{r reweight summary, echo = FALSE}
-# Extract coefficients and confidence intervals from the reweighted model
+# Extract coefficients and CI from the reweighted model
 summary_reweighted <- summary(reweighted_model$finalModel)
 coefficients <- coef(summary_reweighted)
 
-# Calculate Odds Ratios and 95% Confidence Intervals
+# Calculate Odds Ratios and 95% CI
 odds_ratios <- exp(coefficients[, "Estimate"])
 lower_ci <- exp(coefficients[, "Estimate"] - 1.96 * coefficients[, "Std. Error"])
 upper_ci <- exp(coefficients[, "Estimate"] + 1.96 * coefficients[, "Std. Error"])
 
-# Combine into a table
+# Combine
 results_table <- data.frame(
   Predictor = rownames(coefficients),
   Estimate = round(coefficients[, "Estimate"], 3),
@@ -783,14 +789,12 @@ results_table <- data.frame(
   `95% CI (Upper)` = round(upper_ci, 3),
   `P-Value` = format.pval(coefficients[, "Pr(>|z|)"], digits = 3)
 )
-
-# Clean up row names
 rownames(results_table) <- NULL
 
 write.csv(results_table, "tables/reweighted_model_results.csv", row.names = FALSE)
 ```
 The model performance varies across different racial groups.It demonstrates high ROC-AUC for the White group (0.7504), while the lower scores were evaluated for the Black group (0.7021) and Other group (0.6584).When Black and Other groups are combined as a single minority group, the model ROC-AUC improves to 0.7313, though it remains lower than the majority White group.
-Reweighting narrowed this gap, increasing the model’s ROC-AUC for the minority group to 0.7358, closer to the White group (0.7486), improving fairness while maintaining accuracy (table.8). The model equation must be adjusted accordingly if the reweighted model is chosen: $Logit(P) = \beta_0 + \beta_1 \times raceBlack + \ldots + \beta_i \times X_i $ where $\beta_i$ values are from Table 7, and $X_i$ represents the same significant predictors as in the original stepwise model.
+Reweighting narrowed this gap, increasing the model’s ROC-AUC for the minority group to 0.7358, closer to the White group (0.7486), improving fairness while maintaining accuracy (table.8). The model equation must be adjusted accordingly if the reweighted model is chosen: $$Logit(P) = \beta_0 + \beta_1 \times raceBlack + \ldots + \beta_i \times X_i$$ where $\beta_i$ values are from Table 7, and $X_i$ represents the same significant predictors as in the original stepwise model.
 
 ## Conclusion and Limitation
 This study developed a logistic regression model to predict breast cancer survival, highlighting key predictors and addressing racial disparities. Tumor stage and grade were the strongest predictors, with higher stages (e.g., IIIA, IIIB, IIIC) and poorly differentiated tumors (Grades 3 and 4) significantly increasing mortality risk. Positive hormone receptor status improved survival odds, while older age and inadequate lymph node evaluation increased mortality risk. Racial disparities were evident: Black patients faced higher odds of death (OR = 1.5) compared to White patients, while the "Other" race group had lower odds (OR = 0.6). 
@@ -836,8 +840,8 @@ knitr::kable(vif_table, caption = "Variance Inflation Factors for Predictors")
 unstable_table <- read.csv("tables/unstable_coefficients.csv")
 knitr::kable(unstable_table, caption = "Unstable Coefficients")
 
-stepwise_coefficients <- read.csv("tables/stepwise_coefficients.csv")
-knitr::kable(stepwise_coefficients, caption = "Stepwise Model Coefficients", col.names = c("Predictor", "Estimate", "Std. Error", "Z-Value", "P-Value"))
+stepwise_result_table <- read.csv("tables/stepwise_model_results.csv")
+knitr::kable(stepwise_coefficients, caption = "Stepwise Model Results")
 
 reweighted_model_results <- read.csv("tables/reweighted_model_results.csv")
 knitr::kable(reweighted_model_results, caption = "Reweighted Logistic Regression Model Results")
