@@ -534,7 +534,7 @@ cat(paste(desired_section, collapse = "\n"))
 
 5\. Outliers: Cook's Distance identified potential outliers exceeding
 4/n, which flagged numerous points as influential, likely reflecting
-population variability rather than errors (fig.13). Models with and
+population variability rather than errors (fig.12). Models with and
 without these points were compared. Removing these points destabilized
 coefficients like grade, making them unreliable. Robust logistic
 regression (model_robust) mitigated outliers impact, providing stable
@@ -589,7 +589,7 @@ writeLines(capture.output(summary(stepwise_model)), "results/stepwise_model_summ
 ```
 AIC values differed slightly (Full: 3039.8; Forward: 3039.8; Backward: 3037.5; Stepwise: 3037.5), but all methods yielded the same model. The stepwise model was chosen for its lower AIC (full results attached):
 $$Logit(P) = \beta_0 + \beta_1 \times raceBlack + \beta_2 \times raceOther + \ldots + \beta_i \times X_i $$
-Where $\beta_i$ values are taken from Table 10, $X_i$ represents other significant predictors, and $Logit(P) = log(\frac{P}{1-P})$, P is the probability of the `status` being 1.
+Where $\beta_i$ values are taken from Table 6, $X_i$ represents other significant predictors, and $Logit(P) = log(\frac{P}{1-P})$, P is the probability of the `status` being 1.
 
 ```{r interacting effects, echo = FALSE, results='hide'}
 # Define predictors
@@ -665,9 +665,6 @@ rownames(stepwise_result_table) <- NULL
 
 write.csv(stepwise_result_table, "tables/stepwise_model_results.csv", row.names = FALSE)
 ```
-
-
-**Key Findings on Coefficients of Final Model-Original** Table 6 highlights the coefficients for key predictors. Race was significant, with `raceBlack` (0.47961) associated with higher odds of death and `raceOther` (-0.42884) linked to lower odds compared to White patients. `x6th_stage` was the strongest predictor, with higher stages (e.g., IIIC) significantly increasing mortality risk. Poorly differentiated tumors (`Grades 3`: 0.91053, `Grade 4`: 1.87333) also raised mortality odds, while positive hormone receptor status reduced the likelihood of death. Log-transformed predictors showed `rn_examined_log` (-0.29822) improved survival odds, while `age_log` (1.09581) indicated higher mortality risk for older patients. Marital status had no strong associations.
 
 ```{r performance, echo = FALSE}
 set.seed(123)
@@ -795,6 +792,8 @@ write.csv(results_table, "tables/reweighted_model_results.csv", row.names = FALS
 ```
 The model performance varies across different racial groups.It demonstrates high ROC-AUC for the White group (0.7504), while the lower scores were evaluated for the Black group (0.7021) and Other group (0.6584).When Black and Other groups are combined as a single minority group, the model ROC-AUC improves to 0.7313, though it remains lower than the majority White group.
 Reweighting narrowed this gap, increasing the model’s ROC-AUC for the minority group to 0.7358, closer to the White group (0.7486), improving fairness while maintaining accuracy (table.8). The model equation must be adjusted accordingly if the reweighted model is chosen: $$Logit(P) = \beta_0 + \beta_1 \times raceBlack + \ldots + \beta_i \times X_i$$ where $\beta_i$ values are from Table 7, and $X_i$ represents the same significant predictors as in the original stepwise model.
+
+**Key Findings on Coefficients** Tables 6 and 7 present the key predictors and odds ratios from the original stepwise model and the reweighted model, respectively. In both models, race was significant: in the stepwise model, `raceBlack` (OR = 1.615) increased mortality odds by 61.5%, and `raceOther` (OR = 0.651) reduced them by 34.9%, while in the reweighted model, `raceBlack` (OR = 1.423) increased odds by 42.3% and `raceOther` (OR = 0.667) reduced them by 33.3%. `x6th_stage` was the strongest predictor across both models, with odds ratios in the original model (`IIIA`: 2.683, `IIIB`: 4.820, `IIIC`: 7.682) and reweighted model (`IIIA`: 2.505, `IIIB`: 4.163, `IIIC`: 6.255) showing progressively higher mortality risk. Poorly differentiated tumors (`Grade 3` and `Grade 4`) substantially raised mortality odds in both models. Positive hormone receptor status (e.g. estrogen: OR = 0.485 for stepwise; OR = 0.572 for reweighted) was protective. Other predictors, such as lymph nodes examined and age, showed consistent trends, with more nodes examined improving survival and older age increasing mortality risk, though these were non-significant in the reweighted model. Marital status showed no significant associations in either model.
 
 ## Conclusion and Limitation
 This study developed a logistic regression model to predict breast cancer survival, highlighting key predictors and addressing racial disparities. Tumor stage and grade were the strongest predictors, with higher stages (e.g., IIIA, IIIB, IIIC) and poorly differentiated tumors (Grades 3 and 4) significantly increasing mortality risk. Positive hormone receptor status improved survival odds, while older age and inadequate lymph node evaluation increased mortality risk. Racial disparities were evident: Black patients faced higher odds of death (OR = 1.5) compared to White patients, while the "Other" race group had lower odds (OR = 0.6). 
