@@ -1,4 +1,0 @@
-"Criterion","Best_Num_Predictors","Predictors"
-"Adjusted R2",10,"raceBlack, x6th_stageIIIA, x6th_stageIIIB, x6th_stageIIIC, grade3, grade4, estrogen_statusPositive, progesterone_statusPositive, rn_examined_log, age_log"
-"Cp",10,"raceBlack, x6th_stageIIIA, x6th_stageIIIB, x6th_stageIIIC, grade3, grade4, estrogen_statusPositive, progesterone_statusPositive, rn_examined_log, age_log"
-"BIC",10,"raceBlack, x6th_stageIIIA, x6th_stageIIIB, x6th_stageIIIC, grade3, grade4, estrogen_statusPositive, progesterone_statusPositive, rn_examined_log, age_log"
