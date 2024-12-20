@@ -6,6 +6,9 @@ output:
 fontsize: 12pt
 geometry: a4paper, margin = 0.5 in
 header-includes:
+  - \setlength{\headheight}{0in} % Reduce header height
+  - \setlength{\headsep}{0.2in}  % Space between header and text
+  - \setlength{\footskip}{0.2in} % Space between footer and text
   - \usepackage{setspace}
   - \doublespacing
   - \DeclareUnicodeCharacter{2581}{\rule{0.5em}{0.1em}} % U+2581 as a small horizontal line
