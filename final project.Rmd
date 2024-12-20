@@ -841,7 +841,7 @@ unstable_table <- read.csv("tables/unstable_coefficients.csv")
 knitr::kable(unstable_table, caption = "Unstable Coefficients")
 
 stepwise_result_table <- read.csv("tables/stepwise_model_results.csv")
-knitr::kable(stepwise_coefficients, caption = "Stepwise Model Results")
+knitr::kable(stepwise_result_table, caption = "Stepwise Model Results")
 
 reweighted_model_results <- read.csv("tables/reweighted_model_results.csv")
 knitr::kable(reweighted_model_results, caption = "Reweighted Logistic Regression Model Results")
